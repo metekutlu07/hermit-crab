@@ -26,7 +26,7 @@ const testModule=Number(new URLSearchParams(location.search).get('testModule'))|
 let newGolden=false,newReady=false,terrainDebug=false,loadedCount=0;
 const defaults=window.GOLDEN_TERRAIN;
 let terrain=defaults;
-try{const v=JSON.parse(localStorage.getItem('goldenTerrainV1')||'null');if(Array.isArray(v)&&v.length===defaults.length)terrain=v.map((m,i)=>({...defaults[i],ground:m.ground,platforms:m.platforms}));}catch{}
+try{const v=JSON.parse(localStorage.getItem('goldenTerrainV2')||'null');if(Array.isArray(v)&&v.length===defaults.length)terrain=v.map((m,i)=>({...defaults[i],ground:m.ground,platforms:m.platforms,walls:m.walls||defaults[i].walls,hazards:m.hazards||defaults[i].hazards}));}catch{}
 const newWidths=defaults.map(m=>MH*m.width/m.height),newModule=defaults.map(()=>false);
 function loadPainting(name){return new Promise(resolve=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src=assetURL(name)})}
 async function choosePainting(primary,fallback){return (await loadPainting(primary))||(fallback?await loadPainting(fallback):null)}
@@ -43,12 +43,14 @@ function chapterWidth(ch){return moduleStart(ch,moduleCount(ch))}
 function moduleAt(ch,x){let m=0;while(m+1<moduleCount(ch)&&x>=moduleStart(ch,m+1))m++;return m}
 function legacyX(ch,x){const m=Math.max(0,Math.min(2,Math.floor(x/MW)));return moduleStart(ch,m)+(x-m*MW)*moduleWidth(ch,m)/MW}
 function nativeLine(m,points){const offset=newWidths.slice(0,m).reduce((a,b)=>a+b,0),d=defaults[m];return points.map(([x,y])=>[offset+x*newWidths[m]/d.width,y*MH/d.height])}
-let goldenGround=[];
+let goldenGround=[],goldenWalls=[],goldenHazards=[],goldenPlatforms=[];
 function buildGoldenSurfaces(){
- goldenGround=[];const platforms=[];
+ goldenGround=[];goldenWalls=[];goldenHazards=[];const platforms=[];
  for(let m=0;m<loadedCount;m++){
   for(const line of terrain[m].ground)if(line.length>=2)goldenGround.push(nativeLine(m,line));
   for(const line of terrain[m].platforms)if(line.length>=2)platforms.push(nativeLine(m,line));
+  for(const line of terrain[m].walls||[])if(line.length>=2)goldenWalls.push(nativeLine(m,line));
+  for(const poly of terrain[m].hazards||[])if(poly.length>=3)goldenHazards.push(nativeLine(m,poly));
  }
  // Bridge only touching module boundaries, smoothing the last/first 55 world units.
  for(let m=1;m<loadedCount;m++){
@@ -56,13 +58,44 @@ function buildGoldenSurfaces(){
   const left=goldenGround.find(l=>Math.abs(l[l.length-1][0]-seam)<.1&&l[0][0]<seam),right=goldenGround.find(l=>Math.abs(l[0][0]-seam)<.1&&l[l.length-1][0]>seam);
   if(left&&right){const a=left[left.length-1],b=right[0],p=left[left.length-2],q=right[1],d=Math.min(55,(a[0]-p[0])*.5,(q[0]-b[0])*.5);if(d>0){const ly=a[1]+(p[1]-a[1])*d/(a[0]-p[0]),ry=b[1]+(q[1]-b[1])*d/(q[0]-b[0]),mid=(ly+ry)/2;left[left.length-1]=[seam-d,ly];left.push([seam,mid]);right[0]=[seam,mid];right.splice(1,0,[seam+d,ry]);}}
  }
- return [...goldenGround,...platforms];
+ goldenPlatforms=platforms;return [...goldenGround,...platforms];
 }
 let goldenSurfaces=buildGoldenSurfaces();
 function lineY(points,x){if(x<points[0][0]||x>points[points.length-1][0])return null;
  for(let i=1;i<points.length;i++){const [a,y]=points[i-1],[b,z]=points[i];if(x<=b)return y+(z-y)*(x-a)/(b-a)}return null}
 function floorAt(ch,x){if(!newGolden||ch!==0)return CHAPTERS[ch].floor;const ys=goldenGround.map(l=>lineY(l,x)).filter(y=>y!==null);return ys.length?Math.min(...ys):CHAPTERS[ch].floor}
+function hasSupport(x){return goldenSurfaces.some(l=>lineY(l,x)!==null)}
 function safeSpawn(m){const start=moduleStart(0,m);const lines=goldenGround.filter(l=>l[0][0]>=start-.1&&l[0][0]<start+moduleWidth(0,m));const l=lines[0];return l?Math.min(l[l.length-1][0]-2,l[0][0]+Math.min(105,(l[l.length-1][0]-l[0][0])/2)):start+105}
+// Side collision: swept horizontal test against solid line segments.
+const BODY_HALF=24,BODY_HEIGHT=64;
+function blockWalls(prevX,prevY,nextX,nextY){
+ const dx=nextX-prevX;if(Math.abs(dx)<.0001)return nextX;
+ const sign=Math.sign(dx),oldEdge=prevX+sign*BODY_HALF;
+ let target=nextX;
+ for(const wall of goldenWalls)for(let i=1;i<wall.length;i++){
+  const [ax,ay]=wall[i-1],[bx,by]=wall[i];
+  const low=Math.min(ay,by),high=Math.max(ay,by);
+  if(high-low<.001)continue;
+  const top=Math.min(prevY,nextY)-BODY_HEIGHT+4,bottom=Math.max(prevY,nextY)-3;
+  const lo=Math.max(low,top),hi=Math.min(high,bottom);if(hi<=lo)continue;
+  const xAt=y=>ax+(bx-ax)*(y-ay)/(by-ay);
+  const boundary=sign>0?Math.min(xAt(lo),xAt(hi)):Math.max(xAt(lo),xAt(hi));
+  const nextEdge=target+sign*BODY_HALF;
+  if(sign>0&&oldEdge<=boundary+.1&&nextEdge>boundary)target=Math.min(target,boundary-BODY_HALF-.01);
+  else if(sign<0&&oldEdge>=boundary-.1&&nextEdge<boundary)target=Math.max(target,boundary+BODY_HALF+.01);
+ }
+ if(target!==nextX)state.vx=0;
+ return target;
+}
+function inPolygon(x,y,p){let inside=false;for(let i=0,j=p.length-1;i<p.length;j=i++){
+ const [a,b]=p[i],[c,d]=p[j];if((b>y)!==(d>y)&&x<(c-a)*(y-b)/(d-b)+a)inside=!inside;
+ }return inside;}
+function touchesWater(x,fromY,toY){
+ if(toY<fromY)return false;
+ const steps=Math.max(1,Math.ceil((toY-fromY)/8));
+ for(let i=0;i<=steps;i++){const y=fromY+(toY-fromY)*i/steps;if(goldenHazards.some(p=>inPolygon(x,y,p)))return true;}
+ return false;
+}
 function newLanding(prevX,prevY,wasGrounded){
  let result=null;
  for(const line of goldenSurfaces){const y=lineY(line,state.x),before=lineY(line,prevX);if(y===null)continue;
@@ -76,7 +109,7 @@ document.addEventListener('contextmenu',e=>e.preventDefault());document.addEvent
 function initialCollection(ch){return CHAPTERS[ch].specimens.map((name,i)=>({x:ch*0+210+i*920+([0,90,200,0,60][i]),id:`${ch}-${i}`,name,got:!!state.collections[`${ch}-${i}`]}))}
 function enterChapter(ch,resetPosition=true){state.chapter=ch;const C=CHAPTERS[ch];if(resetPosition){state.x=120;state.y=floorAt(ch,state.x)-1;state.ground=false;state.vx=0;state.vy=0;state.health=3;state.broken=false}clearHeld();state.vx=0;state.vy=0;jumps=0;state.checkpoint=110;state.picks=initialCollection(ch);state.paused=false;state.invincible=0;updateHud();mode('game');note(C.descs[0]+' · Explore and discover.',2700);save()}
 async function begin(){await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
-async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W,MW];let m=0,offset=0;while(m+1<old.length&&x>=offset+old[m]){offset+=old[m];m++}m=Math.min(m,moduleCount(0)-1);x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(old[m]||MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
+async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W,MW];let m=0,offset=0;while(m+1<old.length&&x>=offset+old[m]){offset+=old[m];m++}m=Math.min(m,moduleCount(0)-1);x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(old[m]||MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));if(newGolden&&!hasSupport(state.x))state.x=safeSpawn(moduleAt(0,state.x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
 function shellGlyph(kind){const glyphs={golden:'<path d="M12 20C7 20 3 16 3 11a9 9 0 0 1 18 0c0 5-4 9-9 9zM12 15a4 4 0 1 0-4-4c0 3 3 5 6 4"/>',spring:'<path d="M5 19h14L12 3 5 19zM8 12h8m-6-5h4m-7 9h10"/>',heavy:'<path d="M4 15 7 6l7-3 7 7-3 10H8zM7 6l7 7 4 7m-4-7 7-3M4 15l10-2"/>',float:'<ellipse cx="12" cy="12" rx="8" ry="10" transform="rotate(30 12 12)"/><path d="M8 14c-1-3 1-6 4-7"/>'};return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'+glyphs[kind]+'</svg>'}
 function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=C.title;$('chapterName').textContent=C.name;const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('statusLeft').setAttribute('aria-label',state.health+' of 3 hearts');$('hearts').innerHTML=Array.from({length:3},(_,i)=>'<svg viewBox="0 0 24 24" aria-hidden="true" fill="'+(i<state.health?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.5"><path d="M12 20S3 14.6 3 8.6C3 4 8.6 3 12 7c3.4-4 9-3 9 1.6C21 14.6 12 20 12 20z"/></svg>').join('');const slots=$('shellSlots');slots.innerHTML='';for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;b.setAttribute('aria-pressed',String(state.shell===kind));b.innerHTML=shellGlyph(kind);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
 function equip(kind){if(!state.available.includes(kind))return;state.shell=kind;tone(510);updateHud();save();note(`${SHELLS[kind].name} Shell · ${SHELLS[kind].ability}`,1800)}
@@ -90,26 +123,26 @@ document.addEventListener('pointerup',e=>release(e.pointerId));document.addEvent
 const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',ArrowUp:'jump',KeyW:'jump',KeyH:'hide',ShiftLeft:'hide'};
 window.addEventListener('keydown',e=>{if(state.mode!=='game'||state.paused)return;const a=KEYMAP[e.code];if(!a)return;e.preventDefault();if(a==='jump'){if(!e.repeat)jump()}else controls[a]=true});window.addEventListener('keyup',e=>{const a=KEYMAP[e.code];if(a&&a!=='jump')controls[a]=false});
 let jumps=0;
-function jump(){if(state.mode!=='game'||state.paused||controls.hide)return;if(state.ground){state.vy=-730;state.ground=false;jumps=1;tone(520)}else if(state.shell==='spring'&&jumps<2){state.vy=-670;jumps=2;tone(700)}}
+function jump(){if(state.mode!=='game'||state.paused||controls.hide)return;if(state.ground){state.vy=newGolden?-940:-730;state.ground=false;jumps=1;tone(520)}else if(state.shell==='spring'&&jumps<2){state.vy=-670;jumps=2;tone(700)}}
 function groundSegments(ch){let seg=[];for(let m=0;m<3;m++){const left=m*MW,right=(m+1)*MW,C=CHAPTERS[ch];if(ch===3&&m===1){seg.push([left,left+370,C.floor],[left+1320,right,C.floor]);for(let [a,b,y] of C.platforms[m])seg.push([left+a,left+b,y])}else if(ch===0&&m===1){seg.push([left,left+585,C.floor],[left+760,right,C.floor]);seg.push([left+585,left+760,C.floor-72])}else{seg.push([left,right,C.floor])}for(let [a,b,y] of C.platforms[m]){if(ch===3&&m===1)continue;seg.push([left+a,left+b,y])}}return seg}
 let segments=CHAPTERS.map((_,i)=>groundSegments(i));
 function breakWall(){if(state.broken)return;state.broken=true;state.vx=135;tone(290);note('The granite shell fractures the ancient stone!',2500);save()}
-function hurt(message){if(state.invincible>0)return;state.health--;state.invincible=1.7;clearHeld();tone(240);if(newGolden)state.x=state.checkpoint;if(state.health<=0){state.health=3;state.x=state.checkpoint;note('The traveler retreats into its shell · Checkpoint',2000)}else note(message||'Careful! One heart lost.',1700);state.y=floorAt(state.chapter,state.x)-40;state.vy=0;state.vx=0;state.ground=false;jumps=0;updateHud();save()}
+function hurt(message){if(state.invincible>0){if(newGolden){state.x=state.checkpoint;state.y=floorAt(state.chapter,state.x)-3;state.vx=state.vy=0;state.ground=false;clearHeld()}return}state.health--;state.invincible=1.7;clearHeld();tone(240);if(newGolden)state.x=state.checkpoint;if(state.health<=0){state.health=3;state.x=state.checkpoint;note('The traveler retreats into its shell · Checkpoint',2000)}else note(message||'Careful! One heart lost.',1700);state.y=floorAt(state.chapter,state.x)-40;state.vy=0;state.vx=0;state.ground=false;jumps=0;updateHud();save()}
 function finishChapter(){state.paused=true;clearHeld();const C=CHAPTERS[state.chapter];save();if(state.chapter===3){mode('home');showDialog('Homecoming','<p>The little traveler has crossed the golden shore, coral gardens, crystal caverns and sea of stars.</p><p>The most extraordinary shell may be the one that feels like home.</p>',[{text:'See the Homecoming',fn:()=>{mode('home');showEpilogue()}},{text:'Return to Main Menu',fn:()=>{closeDialog();mode('home')}}]);return}
 const next=CHAPTERS[state.chapter+1];showDialog(`${C.name} · Complete`,`<p>You reached the end of this chapter.</p><p>Continue into <strong>${next.name}</strong>?</p>`,[{text:`Enter ${next.name}`,fn:()=>{closeDialog();enterChapter(state.chapter+1)}},{text:'Home',fn:()=>{closeDialog();mode('home')}}])}
 function progress(dt){if(state.mode!=='game'||state.paused)return;const C=CHAPTERS[state.chapter],m=moduleAt(state.chapter,state.x);state.checkpoint=newGolden?safeSpawn(m):Math.max(110,moduleStart(state.chapter,m)+105);
  if(m===0&&state.x>moduleWidth(state.chapter,0)*.36)unlock(C.unlock);
  if(state.chapter===2&&m===1&&!state.broken){const wall=MW+855;if(state.x>wall-85&&state.x<wall+45){if(state.shell==='heavy'&&(controls.right||controls.hide)){breakWall()}else if(state.vx>0){state.x=wall-85;state.vx=0;if(performance.now()%1200<dt*1000)note('A fractured wall · Try the Granite Shell',1600)}}}
  const prevY=state.y,prevX=state.x,wasGrounded=state.ground;const wanted=(+!!controls.right)-(+!!controls.left);
- const maxspeed=controls.hide?0:state.shell==='heavy'?215:350;
+ const maxspeed=controls.hide?0:state.shell==='heavy'?215:newGolden?415:350;
  if(wanted){const target=wanted*maxspeed;state.vx+=(target-state.vx)*Math.min(1,dt*(state.ground?12:8))}else state.vx*=Math.exp(-12*dt);
  state.x+=state.vx*dt;state.x=Math.max(66,Math.min(chapterWidth(state.chapter)+80,state.x));
- state.vy+=(state.shell==='float'&&!state.ground?GRAV*.34:GRAV)*dt;state.y+=state.vy*dt;state.ground=false;
+ state.vy+=(state.shell==='float'&&!state.ground?GRAV*.34:GRAV)*dt;state.y+=state.vy*dt;if(newGolden)state.x=blockWalls(prevX,prevY,state.x,state.y);state.ground=false;
  const sh=segments[state.chapter];let landed=null;if(newGolden&&state.chapter===0){landed=newLanding(prevX,prevY,wasGrounded)}else for(const [x1,x2,y] of sh){if(state.x+31>x1&&state.x-31<x2&&prevY<=y+4&&state.y>=y&&state.vy>=0){if(landed===null||y<landed)landed=y}}
  if(landed!==null){state.y=landed;state.vy=0;state.ground=true;jumps=0}
  const water=state.chapter===3&&m===1&&state.x>MW+370&&state.x<MW+1320;
  if(water&&state.shell==='float'&&!state.ground&&state.y>590){state.y=590;state.vy=0;state.ground=true;jumps=0;state.vx*=.96}
- if(state.y>880)hurt(water?'Deep water · Use the Floating Shell!':'You fell into the tide pool.');
+ if(newGolden&&!state.ground&&touchesWater(state.x,prevY,state.y)){hurt('Tide pool · Try the jump again!');return}if(state.y>880){hurt(water?'Deep water · Use the Floating Shell!':'You fell into the tide pool.');return;}
  const nextModule=moduleAt(state.chapter,state.x);if(nextModule!==m)save();
  for(const item of state.picks||[]){if(!item.got&&Math.abs(item.x-state.x)<64&&Math.abs(item.y-state.y)<110){item.got=true;state.collections[item.id]=true;tone(880);note(`Encyclopedia specimen: ${item.name}`,2200);updateHud();save()}}
  if(state.x>=chapterWidth(state.chapter)-110){if(newGolden&&state.chapter===0&&(loadedCount<defaults.length||testModule)){state.x=chapterWidth(0)-110;state.vx=0;if(!state.waitingForModule){state.waitingForModule=true;note(testModule?'End of terrain test':'The journey continues soon · Module '+String(loadedCount+1).padStart(2,'0'),3000)}}else finishChapter()}else state.waitingForModule=false;
@@ -124,7 +157,8 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  const camera=Math.max(0,Math.min(chapterWidth(state.chapter)-W/S,state.x-W/S*.40));state.cam=camera;
  for(let m=0;m<moduleCount(state.chapter);m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&newModule[m]?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth)cx.drawImage(im,ox,state.originY,width*S,MH*S)}
  cx.save();cx.translate(-camera*S,state.originY);cx.scale(S,S);
- if(terrainDebug){cx.save();cx.strokeStyle='#65ff9c';cx.lineWidth=3;const lines=newGolden?goldenSurfaces:segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]);for(const line of lines){cx.beginPath();line.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.stroke()}cx.restore()}
+ if(terrainDebug){cx.save();cx.lineWidth=3;const stroke=(lines,color,closed=false)=>{cx.strokeStyle=color;for(const l of lines){cx.beginPath();l.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));if(closed){cx.closePath();cx.fillStyle='rgba(75,195,255,.20)';cx.fill()}cx.stroke()}};
+ if(newGolden){stroke(goldenGround,'#72ffac');stroke(goldenPlatforms,'#ffd56a');stroke(goldenWalls,'#ff657b');stroke(goldenHazards,'#63cbff',true)}else stroke(segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]),'#72ffac');cx.restore()}
  // Interactable cracked wall, separate from background.
  if(state.chapter===2&&!state.broken){const x=MW+845,y=CHAPTERS[2].floor;cx.fillStyle='#a28bb5cd';cx.strokeStyle='#e6c8de';cx.lineWidth=5;cx.beginPath();cx.moveTo(x-10,y);cx.lineTo(x-8,y-165);cx.lineTo(x+65,y-167);cx.lineTo(x+63,y);cx.closePath();cx.fill();cx.stroke();cx.strokeStyle='#583e72';cx.lineWidth=3;cx.beginPath();cx.moveTo(x+20,y-165);cx.lineTo(x+44,y-122);cx.lineTo(x+15,y-76);cx.lineTo(x+38,y-29);cx.stroke()}
  for(const item of state.picks||[]){if(item.got)continue;cx.font='55px serif';cx.textAlign='center';cx.shadowColor='#fff2b9';cx.shadowBlur=18;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0}
@@ -141,5 +175,5 @@ function showEpilogue(){showDialog('Homecoming',`<img src="${assetURL('epilogue.
 $('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',()=>{state.sound=!state.sound;$('muteMark').textContent=state.sound?'':'×';$('soundHome').setAttribute('aria-pressed',String(!state.sound))});
 // Help testing without exposing implementation details in the interface.
 if(testModule)newAssetsReady.then(()=>{if(newReady){enterChapter(0);const m=Math.max(0,Math.min(loadedCount-1,testModule-1));state.x=safeSpawn(m);state.y=floorAt(0,state.x)-1;state.ground=false;terrainDebug=true;note('Terrain test · Module '+String(m+1).padStart(2,'0'),2400)}});
-window.travelerDebug={state,CHAPTERS,goToChapter:n=>enterChapter(Math.max(0,Math.min(3,n))),advanceToEnd:()=>{state.x=chapterWidth(state.chapter)-130;state.y=floorAt(state.chapter,state.x);},setTerrainDebug:value=>{terrainDebug=!!value},getTerrain:()=>newGolden?goldenSurfaces:segments[state.chapter],newArtReady:()=>newReady,save};
+window.travelerDebug={state,CHAPTERS,goToChapter:n=>enterChapter(Math.max(0,Math.min(3,n))),advanceToEnd:()=>{state.x=chapterWidth(state.chapter)-130;state.y=floorAt(state.chapter,state.x);},setTerrainDebug:value=>{terrainDebug=!!value},getTerrain:()=>newGolden?goldenSurfaces:segments[state.chapter],getObstacles:()=>({walls:goldenWalls,hazards:goldenHazards}),newArtReady:()=>newReady,save};
 })();
