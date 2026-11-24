@@ -41,7 +41,8 @@ const newAssetsReady=Promise.all([
 async function waitForNewArt(){await Promise.race([newAssetsReady,new Promise(resolve=>setTimeout(resolve,30000))]);}
 function moduleWidth(ch,m){return newGolden&&ch===0?newWidths[m]:MW}
 function moduleStart(ch,m){let x=0;for(let i=0;i<m;i++)x+=moduleWidth(ch,i);return x}
-function chapterWidth(ch){return moduleStart(ch,3)}
+function moduleCount(ch){return newGolden&&ch===0&&!newModule[2]?2:3}
+function chapterWidth(ch){return moduleStart(ch,moduleCount(ch))}
 function moduleAt(ch,x){return x<moduleStart(ch,1)?0:x<moduleStart(ch,2)?1:2}
 function legacyX(ch,x){const m=Math.max(0,Math.min(2,Math.floor(x/MW)));return moduleStart(ch,m)+(x-m*MW)*moduleWidth(ch,m)/MW}
 const nativeHeights=[938,938,847];
@@ -115,17 +116,17 @@ function progress(dt){if(state.mode!=='game'||state.paused)return;const C=CHAPTE
  if(state.y>880)hurt(water?'Deep water · Use the Floating Shell!':'You fell into the tide pool.');
  const nextModule=moduleAt(state.chapter,state.x);if(nextModule!==m)save();
  for(const item of state.picks||[]){if(!item.got&&Math.abs(item.x-state.x)<64&&Math.abs(item.y-state.y)<110){item.got=true;state.collections[item.id]=true;tone(880);note(`Encyclopedia specimen: ${item.name}`,2200);updateHud();save()}}
- if(state.x>=chapterWidth(state.chapter)-110)finishChapter();
+ if(state.x>=chapterWidth(state.chapter)-110){if(newGolden&&state.chapter===0&&!newModule[2]){state.x=chapterWidth(0)-110;state.vx=0;if(!state.waitingForModule){state.waitingForModule=true;note('The journey continues soon · Module 03',3000)}}else finishChapter()}else state.waitingForModule=false;
  state.invincible=Math.max(0,state.invincible-dt);state.anim+=dt;
 }
-function makePickups(){const C=CHAPTERS[state.chapter];state.picks=C.specimens.map((name,i)=>{const x=legacyX(state.chapter,350+i*890+(i%2)*170);return {x,y:floorAt(state.chapter,x)-35-(i===2?75:0),id:`${state.chapter}-${i}`,name,got:!!state.collections[`${state.chapter}-${i}`]}})}
+function makePickups(){const C=CHAPTERS[state.chapter];state.picks=C.specimens.map((name,i)=>{const x=legacyX(state.chapter,350+i*890+(i%2)*170);return {x,y:floorAt(state.chapter,x)-35-(i===2?75:0),id:`${state.chapter}-${i}`,name,got:!!state.collections[`${state.chapter}-${i}`]}}).filter(item=>item.x<chapterWidth(state.chapter)-110)}
 const oldEnter=enterChapter;enterChapter=function(ch,reset=true){newGolden=ch===0&&newReady;oldEnter(ch,reset);makePickups()};
 function resize(){const r=canvas.getBoundingClientRect(),dpr=Math.min(3,devicePixelRatio||1);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);cx.setTransform(dpr,0,0,dpr,0,0);state.viewW=Math.max(1,r.width);state.viewH=Math.max(1,r.height);state.zoom=newGolden?1:r.width<650&&r.height>r.width?1.045:1;state.scale=state.viewH/MH*state.zoom;state.originY=(state.viewH-MH*state.scale)/2}
 window.addEventListener('resize',resize);resize();
 function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;const C=CHAPTERS[state.chapter],S=state.scale,W=state.viewW,H=state.viewH;
  cx.save();cx.clearRect(0,0,W,H);cx.fillStyle=C.palette;cx.fillRect(0,0,W,H);
  const camera=Math.max(0,Math.min(chapterWidth(state.chapter)-W/S,state.x-W/S*.40));state.cam=camera;
- for(let m=0;m<3;m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&newModule[m]?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth)cx.drawImage(im,ox,state.originY,width*S,MH*S)}
+ for(let m=0;m<moduleCount(state.chapter);m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&newModule[m]?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth)cx.drawImage(im,ox,state.originY,width*S,MH*S)}
  cx.save();cx.translate(-camera*S,state.originY);cx.scale(S,S);
  if(terrainDebug){cx.save();cx.strokeStyle='#65ff9c';cx.lineWidth=3;const lines=newGolden?goldenSurfaces:segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]);for(const line of lines){cx.beginPath();line.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.stroke()}cx.restore()}
  // Interactable cracked wall, separate from background.
