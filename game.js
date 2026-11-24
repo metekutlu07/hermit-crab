@@ -19,6 +19,32 @@ function tone(freq=660){if(!state.sound)return;try{audio=audio||new(window.Audio
 function assetURL(url){return (window.TRAVEL_ASSETS&&window.TRAVEL_ASSETS[url])||A+url}function img(url){const i=new Image();i.src=assetURL(url);return i}
 for(const c of CHAPTERS)for(let m=0;m<3;m++)assets[`${c.key}-${m}`]=img(`${c.key}-${m+1}.jpg`);
 for(const kind of Object.keys(SHELLS))for(let i=0;i<2;i++)assets[`crab-${kind}-${i}`]=img(`crab-${kind}-${i}.png`);
+// Golden Shell watercolor animation. Keep the legacy sprite until all three sheets are loaded.
+const GOLDEN_ANIMS={idle:img('crab-golden-idle.png'),walk:img('crab-golden-walk.png'),jump:img('crab-golden-jump.png')};
+const GOLDEN_CELL_W=320,GOLDEN_CELL_H=280;
+const goldenAnim={mode:'idle',elapsed:0,facing:1,lastTime:0,lastGround:false};
+function imageReady(im){return !!(im&&im.complete&&im.naturalWidth>0&&im.naturalHeight>0)}
+function goldenArtReady(){return Object.values(GOLDEN_ANIMS).every(im=>imageReady(im)&&im.naturalWidth===640&&im.naturalHeight===560)}
+function resetGoldenAnimation(){Object.assign(goldenAnim,{mode:'idle',elapsed:0,facing:1,lastTime:state.anim,lastGround:false})}
+function selectGoldenFrame(){
+ const a=goldenAnim,dt=Math.max(0,Math.min(.05,state.anim-a.lastTime));a.lastTime=state.anim;
+ if(!state.paused){if(state.vx>12)a.facing=1;else if(state.vx< -12)a.facing=-1;}
+ const mode=controls.hide?'idle':!state.ground?'jump':Math.abs(state.vx)>36?'walk':'idle';
+ if(mode!==a.mode){a.mode=mode;a.elapsed=0}else a.elapsed+=dt;
+ let frame=0;
+ if(mode==='idle')frame=controls.hide?0:Math.floor(a.elapsed*3)%4;
+ else if(mode==='walk')frame=Math.floor(a.elapsed*9)%4;
+ else frame=a.elapsed<.055&&state.vy<0?0:state.vy< -260?1:Math.abs(state.vy)<=260?2:3;
+ return {mode,frame,facing:a.facing};
+}
+function drawGoldenSprite(){
+ const pose=selectGoldenFrame(),im=GOLDEN_ANIMS[pose.mode];
+ if(!goldenArtReady())return false;
+ const w=152,h=w*GOLDEN_CELL_H/GOLDEN_CELL_W;
+ cx.save();cx.translate(state.x,state.y);cx.scale(pose.facing,controls.hide?.72:1);
+ cx.drawImage(im,(pose.frame%2)*GOLDEN_CELL_W,Math.floor(pose.frame/2)*GOLDEN_CELL_H,GOLDEN_CELL_W,GOLDEN_CELL_H,-w/2,-h,w,h);
+ cx.restore();return true;
+}
 assets.epilogue=img('epilogue.jpg');
 // New artwork is activated only when both original JPEGs are available.
 const NEW_W=1536*MH/938, K=MH/938;
@@ -107,7 +133,7 @@ function newLanding(prevX,prevY,wasGrounded){
 window.addEventListener('keydown',e=>{if(e.code==='KeyG'&&!e.repeat&&state.mode==='game')terrainDebug=!terrainDebug;});
 document.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('selectstart',e=>e.preventDefault());function mode(name){state.mode=name;$('home').classList.toggle('visible',name==='home');$('game').classList.toggle('visible',name==='game');if(name==='game'){resize();requestAnimationFrame(resize)}else clearHeld()}
 function initialCollection(ch){return CHAPTERS[ch].specimens.map((name,i)=>({x:ch*0+210+i*920+([0,90,200,0,60][i]),id:`${ch}-${i}`,name,got:!!state.collections[`${ch}-${i}`]}))}
-function enterChapter(ch,resetPosition=true){state.chapter=ch;const C=CHAPTERS[ch];if(resetPosition){state.x=120;state.y=floorAt(ch,state.x)-1;state.ground=false;state.vx=0;state.vy=0;state.health=3;state.broken=false}clearHeld();state.vx=0;state.vy=0;jumps=0;state.checkpoint=110;state.picks=initialCollection(ch);state.paused=false;state.invincible=0;updateHud();mode('game');note(C.descs[0]+' · Explore and discover.',2700);save()}
+function enterChapter(ch,resetPosition=true){state.chapter=ch;resetGoldenAnimation();const C=CHAPTERS[ch];if(resetPosition){state.x=120;state.y=floorAt(ch,state.x)-1;state.ground=false;state.vx=0;state.vy=0;state.health=3;state.broken=false}clearHeld();state.vx=0;state.vy=0;jumps=0;state.checkpoint=110;state.picks=initialCollection(ch);state.paused=false;state.invincible=0;updateHud();mode('game');note(C.descs[0]+' · Explore and discover.',2700);save()}
 async function begin(){await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
 async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W,MW];let m=0,offset=0;while(m+1<old.length&&x>=offset+old[m]){offset+=old[m];m++}m=Math.min(m,moduleCount(0)-1);x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(old[m]||MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));if(newGolden&&!hasSupport(state.x))state.x=safeSpawn(moduleAt(0,state.x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
 function shellGlyph(kind){const glyphs={golden:'<path d="M12 20C7 20 3 16 3 11a9 9 0 0 1 18 0c0 5-4 9-9 9zM12 15a4 4 0 1 0-4-4c0 3 3 5 6 4"/>',spring:'<path d="M5 19h14L12 3 5 19zM8 12h8m-6-5h4m-7 9h10"/>',heavy:'<path d="M4 15 7 6l7-3 7 7-3 10H8zM7 6l7 7 4 7m-4-7 7-3M4 15l10-2"/>',float:'<ellipse cx="12" cy="12" rx="8" ry="10" transform="rotate(30 12 12)"/><path d="M8 14c-1-3 1-6 4-7"/>'};return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'+glyphs[kind]+'</svg>'}
@@ -162,8 +188,11 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  // Interactable cracked wall, separate from background.
  if(state.chapter===2&&!state.broken){const x=MW+845,y=CHAPTERS[2].floor;cx.fillStyle='#a28bb5cd';cx.strokeStyle='#e6c8de';cx.lineWidth=5;cx.beginPath();cx.moveTo(x-10,y);cx.lineTo(x-8,y-165);cx.lineTo(x+65,y-167);cx.lineTo(x+63,y);cx.closePath();cx.fill();cx.stroke();cx.strokeStyle='#583e72';cx.lineWidth=3;cx.beginPath();cx.moveTo(x+20,y-165);cx.lineTo(x+44,y-122);cx.lineTo(x+15,y-76);cx.lineTo(x+38,y-29);cx.stroke()}
  for(const item of state.picks||[]){if(item.got)continue;cx.font='55px serif';cx.textAlign='center';cx.shadowColor='#fff2b9';cx.shadowBlur=18;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0}
- const px=state.x,py=state.y,walk=Math.abs(state.vx)>36&&state.ground;const kind=state.shell,frame=walk?(Math.floor(state.anim*7)%2):0;const im=assets[`crab-${kind}-${frame}`];
- if(im.complete&&im.naturalWidth){cx.save();cx.translate(px,py);if(state.vx< -12)cx.scale(-1,1);if(controls.hide)cx.scale(1,.72);cx.drawImage(im,-76,-116,152,116);cx.restore()}
+ const px=state.x,py=state.y,walk=Math.abs(state.vx)>36&&state.ground;const kind=state.shell,frame=walk?(Math.floor(state.anim*7)%2):0;
+ if(kind!=='golden'||!drawGoldenSprite()){
+  const im=assets[`crab-${kind}-${frame}`],base=assets[`crab-${kind}-0`],sprite=imageReady(im)?im:base;
+  if(imageReady(sprite)){cx.save();cx.translate(px,py);if(state.vx< -12)cx.scale(-1,1);if(controls.hide)cx.scale(1,.72);cx.drawImage(sprite,-76,-116,152,116);cx.restore()}
+ }
  cx.restore();cx.restore()}
 function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
 function showDialog(title,html,buttons){state.paused=true;clearHeld();$('dialogTitle').textContent=title;$('dialogBody').innerHTML=html;const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=b.text;btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
@@ -175,5 +204,5 @@ function showEpilogue(){showDialog('Homecoming',`<img src="${assetURL('epilogue.
 $('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',()=>{state.sound=!state.sound;$('muteMark').textContent=state.sound?'':'×';$('soundHome').setAttribute('aria-pressed',String(!state.sound))});
 // Help testing without exposing implementation details in the interface.
 if(testModule)newAssetsReady.then(()=>{if(newReady){enterChapter(0);const m=Math.max(0,Math.min(loadedCount-1,testModule-1));state.x=safeSpawn(m);state.y=floorAt(0,state.x)-1;state.ground=false;terrainDebug=true;note('Terrain test · Module '+String(m+1).padStart(2,'0'),2400)}});
-window.travelerDebug={state,CHAPTERS,goToChapter:n=>enterChapter(Math.max(0,Math.min(3,n))),advanceToEnd:()=>{state.x=chapterWidth(state.chapter)-130;state.y=floorAt(state.chapter,state.x);},setTerrainDebug:value=>{terrainDebug=!!value},getTerrain:()=>newGolden?goldenSurfaces:segments[state.chapter],getObstacles:()=>({walls:goldenWalls,hazards:goldenHazards}),newArtReady:()=>newReady,save};
+window.travelerDebug={state,CHAPTERS,goToChapter:n=>enterChapter(Math.max(0,Math.min(3,n))),advanceToEnd:()=>{state.x=chapterWidth(state.chapter)-130;state.y=floorAt(state.chapter,state.x);},setTerrainDebug:value=>{terrainDebug=!!value},getTerrain:()=>newGolden?goldenSurfaces:segments[state.chapter],getObstacles:()=>({walls:goldenWalls,hazards:goldenHazards}),newArtReady:()=>newReady,goldenArtReady,save};
 })();
