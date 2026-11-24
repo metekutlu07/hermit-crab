@@ -14,25 +14,27 @@ const assets={}, canvas=$('stage'),cx=canvas.getContext('2d',{alpha:false}),cont
 const state={mode:'home',chapter:0,x:135,y:0,vx:0,vy:0,ground:false,available:['golden'],shell:'golden',health:3,collections:{},broken:false,paused:false,hidden:false,last:0,anim:0,invincible:0,checkpoint:100,cam:0,messages:0,scale:1,originY:0,viewW:800,viewH:600,zoom:1,sound:true,pickups:[]};
 let buttonPointers=new Map(),touchPointers=new Map(),audio=null;
 function safeGet(){try{return JSON.parse(localStorage.getItem('travelerShellSave')||'null')}catch{return null}}
-function save(){try{localStorage.setItem('travelerShellSave',JSON.stringify({chapter:state.chapter,x:state.x,layout:newGolden&&state.chapter===0?'golden-v2':'legacy',health:state.health,available:state.available,shell:state.shell,collections:state.collections,broken:state.broken}))}catch{}}
+function save(){try{localStorage.setItem('travelerShellSave',JSON.stringify({chapter:state.chapter,x:state.x,layout:newGolden&&state.chapter===0?'golden-v2':'legacy',layoutWidths:newGolden&&state.chapter===0?[...newWidths]:null,health:state.health,available:state.available,shell:state.shell,collections:state.collections,broken:state.broken}))}catch{}}
 function tone(freq=660){if(!state.sound)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(freq*1.25,audio.currentTime+.1);g.gain.setValueAtTime(.07,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.22);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.24)}catch{}}
 function assetURL(url){return (window.TRAVEL_ASSETS&&window.TRAVEL_ASSETS[url])||A+url}function img(url){const i=new Image();i.src=assetURL(url);return i}
 for(const c of CHAPTERS)for(let m=0;m<3;m++)assets[`${c.key}-${m}`]=img(`${c.key}-${m+1}.jpg`);
 for(const kind of Object.keys(SHELLS))for(let i=0;i<2;i++)assets[`crab-${kind}-${i}`]=img(`crab-${kind}-${i}.png`);
 assets.epilogue=img('epilogue.jpg');
 // New artwork is activated only when both original JPEGs are available.
-const NEW_NAMES=['01-hermits-house.jpg','02-open-sandy-beach.jpg'], NEW_W=1536*MH/938, K=MH/938;
+const NEW_NAMES=['01-hermits-house.jpeg','02-open-sandy-beach.jpeg'], NEW_W=1536*MH/938, K=MH/938;
 let newGolden=false,newReady=false,terrainDebug=false;
+const newWidths=[NEW_W,NEW_W];
 const newImages=NEW_NAMES.map(name=>new Promise(resolve=>{
  const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src=assetURL(name);
 }));
 const newAssetsReady=Promise.all(newImages).then(images=>{
- if(images.every(im=>im&&im.naturalWidth===1536&&im.naturalHeight===938)){
-  assets['golden-new-0']=images[0];assets['golden-new-1']=images[1];newReady=true;
+ if(images.every(im=>im&&im.naturalWidth>0&&im.naturalHeight>0)){
+  images.forEach((im,i)=>{assets[`golden-new-${i}`]=im;newWidths[i]=MH*im.naturalWidth/im.naturalHeight;});
+  goldenSurfaces=buildGoldenSurfaces();newReady=true;
  }return newReady;
 });
-async function waitForNewArt(){await Promise.race([newAssetsReady,new Promise(resolve=>setTimeout(resolve,5000))]);}
-function moduleWidth(ch,m){return newGolden&&ch===0&&m<2?NEW_W:MW}
+async function waitForNewArt(){await Promise.race([newAssetsReady,new Promise(resolve=>setTimeout(resolve,30000))]);}
+function moduleWidth(ch,m){return newGolden&&ch===0&&m<2?newWidths[m]:MW}
 function moduleStart(ch,m){let x=0;for(let i=0;i<m;i++)x+=moduleWidth(ch,i);return x}
 function chapterWidth(ch){return moduleStart(ch,3)}
 function moduleAt(ch,x){return x<moduleStart(ch,1)?0:x<moduleStart(ch,2)?1:2}
@@ -45,12 +47,13 @@ const nativePlatforms=[
  [[[798,519],[865,514],[1000,511],[1110,507],[1180,508]]],
  [[[220,528],[270,515],[350,501],[425,503]]]
 ];
-function nativeLine(m,points){return points.map(([x,y])=>[m*NEW_W+x*K,y*K])}
-const goldenSurfaces=[
- [...nativeLine(0,nativeGround[0]),...nativeLine(1,nativeGround[1]).slice(1),[2*NEW_W+MW,626]],
+function nativeLine(m,points){return points.map(([x,y])=>[(m===0?0:newWidths[0])+x*newWidths[m]/1536,y*K])}
+function buildGoldenSurfaces(){const end=newWidths[0]+newWidths[1];return [
+ [...nativeLine(0,nativeGround[0]),...nativeLine(1,nativeGround[1]).slice(1),[end+MW,626]],
  ...nativePlatforms.flatMap((lines,m)=>lines.map(line=>nativeLine(m,line))),
- ...CHAPTERS[0].platforms[2].map(([a,b,y])=>[[2*NEW_W+a,y],[2*NEW_W+b,y]])
-];
+ ...CHAPTERS[0].platforms[2].map(([a,b,y])=>[[end+a,y],[end+b,y]])
+]}
+let goldenSurfaces=buildGoldenSurfaces();
 function lineY(points,x){if(x<points[0][0]||x>points[points.length-1][0])return null;
  for(let i=1;i<points.length;i++){const [a,y]=points[i-1],[b,z]=points[i];if(x<=b)return y+(z-y)*(x-a)/(b-a)}return null}
 function floorAt(ch,x){return newGolden&&ch===0?(lineY(goldenSurfaces[0],Math.max(0,Math.min(chapterWidth(ch),x)))??CHAPTERS[ch].floor):CHAPTERS[ch].floor}
@@ -67,7 +70,7 @@ document.addEventListener('contextmenu',e=>e.preventDefault());document.addEvent
 function initialCollection(ch){return CHAPTERS[ch].specimens.map((name,i)=>({x:ch*0+210+i*920+([0,90,200,0,60][i]),id:`${ch}-${i}`,name,got:!!state.collections[`${ch}-${i}`]}))}
 function enterChapter(ch,resetPosition=true){state.chapter=ch;const C=CHAPTERS[ch];if(resetPosition){state.x=120;state.y=floorAt(ch,state.x)-1;state.ground=false;state.vx=0;state.vy=0;state.health=3;state.broken=false}clearHeld();state.vx=0;state.vy=0;jumps=0;state.checkpoint=110;state.picks=initialCollection(ch);state.paused=false;state.invincible=0;updateHud();mode('game');note(C.descs[0]+' · Explore and discover.',2700);save()}
 async function begin(){await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
-async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(newGolden&&s.layout!=='golden-v2')x=legacyX(0,x);else if(!newGolden&&s.layout==='golden-v2'){const m=x<NEW_W?0:x<2*NEW_W?1:2;x=m*MW+(x-m*NEW_W)*(m<2?MW/NEW_W:1)}}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
+async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W],m=x<old[0]?0:x<old[0]+old[1]?1:2,offset=m===0?0:m===1?old[0]:old[0]+old[1];x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(m<2?old[m]:MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
 function shellIcon(kind){return assetURL(`crab-${kind}-0.png`)}
 function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=C.title;$('chapterName').textContent=C.name;const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('hearts').textContent='♥ '.repeat(state.health)+'♡ '.repeat(3-state.health);const slots=$('shellSlots');slots.innerHTML='';for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;const im=document.createElement('img');im.src=shellIcon(kind);im.alt='';b.append(im);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
 function equip(kind){if(!state.available.includes(kind))return;state.shell=kind;tone(510);updateHud();save();note(`${SHELLS[kind].name} Shell · ${SHELLS[kind].ability}`,1800)}
