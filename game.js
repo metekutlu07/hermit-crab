@@ -21,37 +21,46 @@ for(const c of CHAPTERS)for(let m=0;m<3;m++)assets[`${c.key}-${m}`]=img(`${c.key
 for(const kind of Object.keys(SHELLS))for(let i=0;i<2;i++)assets[`crab-${kind}-${i}`]=img(`crab-${kind}-${i}.png`);
 assets.epilogue=img('epilogue.jpg');
 // New artwork is activated only when both original JPEGs are available.
-const NEW_NAMES=['01-hermits-house.jpeg','02-open-sandy-beach.jpeg'], NEW_W=1536*MH/938, K=MH/938;
+const NEW_W=1536*MH/938, K=MH/938;
 let newGolden=false,newReady=false,terrainDebug=false;
-const newWidths=[NEW_W,NEW_W];
-const newImages=NEW_NAMES.map(name=>new Promise(resolve=>{
+const newWidths=[NEW_W,NEW_W,MW], newModule=[false,false,false];
+function loadPainting(name){return new Promise(resolve=>{
  const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src=assetURL(name);
-}));
-const newAssetsReady=Promise.all(newImages).then(images=>{
- if(images.every(im=>im&&im.naturalWidth>0&&im.naturalHeight>0)){
-  images.forEach((im,i)=>{assets[`golden-new-${i}`]=im;newWidths[i]=MH*im.naturalWidth/im.naturalHeight;});
+})}
+async function choosePainting(primary,fallback){return (await loadPainting(primary))||(fallback?await loadPainting(fallback):null)}
+const newAssetsReady=Promise.all([
+ loadPainting('01-hermits-house.jpeg'),
+ choosePainting('02-final.jpeg','02-open-sandy-beach.jpeg'),
+ loadPainting('03-proto.jpeg')
+]).then(images=>{
+ if(images.slice(0,2).every(im=>im&&im.naturalWidth>0&&im.naturalHeight>0)){
+  images.forEach((im,i)=>{if(im&&im.naturalWidth>0&&im.naturalHeight>0){assets[`golden-new-${i}`]=im;newWidths[i]=MH*im.naturalWidth/im.naturalHeight;newModule[i]=true}});
   goldenSurfaces=buildGoldenSurfaces();newReady=true;
  }return newReady;
 });
 async function waitForNewArt(){await Promise.race([newAssetsReady,new Promise(resolve=>setTimeout(resolve,30000))]);}
-function moduleWidth(ch,m){return newGolden&&ch===0&&m<2?newWidths[m]:MW}
+function moduleWidth(ch,m){return newGolden&&ch===0?newWidths[m]:MW}
 function moduleStart(ch,m){let x=0;for(let i=0;i<m;i++)x+=moduleWidth(ch,i);return x}
 function chapterWidth(ch){return moduleStart(ch,3)}
 function moduleAt(ch,x){return x<moduleStart(ch,1)?0:x<moduleStart(ch,2)?1:2}
 function legacyX(ch,x){const m=Math.max(0,Math.min(2,Math.floor(x/MW)));return moduleStart(ch,m)+(x-m*MW)*moduleWidth(ch,m)/MW}
+const nativeHeights=[938,938,847];
 const nativeGround=[
  [[0,640],[100,637],[220,630],[350,628],[480,636],[600,641],[730,640],[850,638],[980,637],[1100,628],[1230,620],[1330,609],[1430,590],[1536,588]],
- [[0,588],[100,588],[180,607],[260,620],[350,620],[480,633],[600,645],[730,650],[850,651],[1000,650],[1100,650],[1250,645],[1380,638],[1536,626/K]]
+ [[0,588],[100,588],[180,607],[260,620],[350,620],[480,633],[600,645],[730,650],[850,651],[1000,650],[1100,650],[1250,645],[1380,638],[1536,626/K]],
+ [[0,626*847/MH],[100,565],[220,574],[350,589],[480,593],[600,592],[720,595],[850,609],[980,613],[1100,594],[1250,589],[1380,596],[1536,585]]
 ];
 const nativePlatforms=[
  [[[798,519],[865,514],[1000,511],[1110,507],[1180,508]]],
- [[[220,528],[270,515],[350,501],[425,503]]]
+ [[[220,528],[270,515],[350,501],[425,503]]],
+ [[[0,405],[65,409],[120,425],[145,438]],[[740,478],[780,458],[835,449],[870,459],[900,480]],[[965,390],[1050,374],[1150,363],[1230,330],[1320,290],[1420,258],[1536,273]]]
 ];
-function nativeLine(m,points){return points.map(([x,y])=>[(m===0?0:newWidths[0])+x*newWidths[m]/1536,y*K])}
-function buildGoldenSurfaces(){const end=newWidths[0]+newWidths[1];return [
- [...nativeLine(0,nativeGround[0]),...nativeLine(1,nativeGround[1]).slice(1),[end+MW,626]],
- ...nativePlatforms.flatMap((lines,m)=>lines.map(line=>nativeLine(m,line))),
- ...CHAPTERS[0].platforms[2].map(([a,b,y])=>[[end+a,y],[end+b,y]])
+function nativeLine(m,points){const offset=newWidths.slice(0,m).reduce((a,b)=>a+b,0);return points.map(([x,y])=>[offset+x*newWidths[m]/1536,y*MH/nativeHeights[m]])}
+function buildGoldenSurfaces(){const end=newWidths[0]+newWidths[1];const third=newModule[2];
+return [
+ [...nativeLine(0,nativeGround[0]),...nativeLine(1,nativeGround[1]).slice(1),...(third?nativeLine(2,nativeGround[2]).slice(1):[[end+MW,626]])],
+ ...nativePlatforms.slice(0,third?3:2).flatMap((lines,m)=>lines.map(line=>nativeLine(m,line))),
+ ...(third?[]:CHAPTERS[0].platforms[2].map(([a,b,y])=>[[end+a,y],[end+b,y]]))
 ]}
 let goldenSurfaces=buildGoldenSurfaces();
 function lineY(points,x){if(x<points[0][0]||x>points[points.length-1][0])return null;
@@ -70,7 +79,7 @@ document.addEventListener('contextmenu',e=>e.preventDefault());document.addEvent
 function initialCollection(ch){return CHAPTERS[ch].specimens.map((name,i)=>({x:ch*0+210+i*920+([0,90,200,0,60][i]),id:`${ch}-${i}`,name,got:!!state.collections[`${ch}-${i}`]}))}
 function enterChapter(ch,resetPosition=true){state.chapter=ch;const C=CHAPTERS[ch];if(resetPosition){state.x=120;state.y=floorAt(ch,state.x)-1;state.ground=false;state.vx=0;state.vy=0;state.health=3;state.broken=false}clearHeld();state.vx=0;state.vy=0;jumps=0;state.checkpoint=110;state.picks=initialCollection(ch);state.paused=false;state.invincible=0;updateHud();mode('game');note(C.descs[0]+' · Explore and discover.',2700);save()}
 async function begin(){await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
-async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W],m=x<old[0]?0:x<old[0]+old[1]?1:2,offset=m===0?0:m===1?old[0]:old[0]+old[1];x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(m<2?old[m]:MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
+async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W],m=x<old[0]?0:x<old[0]+old[1]?1:2,offset=m===0?0:m===1?old[0]:old[0]+old[1];x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(old[m]||MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
 function shellIcon(kind){return assetURL(`crab-${kind}-0.png`)}
 function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=C.title;$('chapterName').textContent=C.name;const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('hearts').textContent='♥ '.repeat(state.health)+'♡ '.repeat(3-state.health);const slots=$('shellSlots');slots.innerHTML='';for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;const im=document.createElement('img');im.src=shellIcon(kind);im.alt='';b.append(im);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
 function equip(kind){if(!state.available.includes(kind))return;state.shell=kind;tone(510);updateHud();save();note(`${SHELLS[kind].name} Shell · ${SHELLS[kind].ability}`,1800)}
@@ -116,7 +125,7 @@ window.addEventListener('resize',resize);resize();
 function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;const C=CHAPTERS[state.chapter],S=state.scale,W=state.viewW,H=state.viewH;
  cx.save();cx.clearRect(0,0,W,H);cx.fillStyle=C.palette;cx.fillRect(0,0,W,H);
  const camera=Math.max(0,Math.min(chapterWidth(state.chapter)-W/S,state.x-W/S*.40));state.cam=camera;
- for(let m=0;m<3;m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&m<2?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth)cx.drawImage(im,ox,state.originY,width*S,MH*S)}
+ for(let m=0;m<3;m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&newModule[m]?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth)cx.drawImage(im,ox,state.originY,width*S,MH*S)}
  cx.save();cx.translate(-camera*S,state.originY);cx.scale(S,S);
  if(terrainDebug){cx.save();cx.strokeStyle='#65ff9c';cx.lineWidth=3;const lines=newGolden?goldenSurfaces:segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]);for(const line of lines){cx.beginPath();line.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.stroke()}cx.restore()}
  // Interactable cracked wall, separate from background.
