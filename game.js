@@ -1,6 +1,6 @@
 /* A Traveler in a Shell · independent reconstruction (2026)
    Plain JavaScript + Canvas 2D; no frameworks or network requests.
-   World units are the native 1672 × 941 watercolor image dimensions.
+   World height is 941 units; module widths preserve the source aspect ratio.
 */
 (()=>{'use strict';
 const $=id=>document.getElementById(id), A='assets/', MW=1672, MH=941, GRAV=1650;
@@ -14,17 +14,60 @@ const assets={}, canvas=$('stage'),cx=canvas.getContext('2d',{alpha:false}),cont
 const state={mode:'home',chapter:0,x:135,y:0,vx:0,vy:0,ground:false,available:['golden'],shell:'golden',health:3,collections:{},broken:false,paused:false,hidden:false,last:0,anim:0,invincible:0,checkpoint:100,cam:0,messages:0,scale:1,originY:0,viewW:800,viewH:600,zoom:1,sound:true,pickups:[]};
 let buttonPointers=new Map(),touchPointers=new Map(),audio=null;
 function safeGet(){try{return JSON.parse(localStorage.getItem('travelerShellSave')||'null')}catch{return null}}
-function save(){try{localStorage.setItem('travelerShellSave',JSON.stringify({chapter:state.chapter,x:state.x,health:state.health,available:state.available,shell:state.shell,collections:state.collections,broken:state.broken}))}catch{}}
+function save(){try{localStorage.setItem('travelerShellSave',JSON.stringify({chapter:state.chapter,x:state.x,layout:newGolden&&state.chapter===0?'golden-v2':'legacy',health:state.health,available:state.available,shell:state.shell,collections:state.collections,broken:state.broken}))}catch{}}
 function tone(freq=660){if(!state.sound)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(freq*1.25,audio.currentTime+.1);g.gain.setValueAtTime(.07,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.22);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.24)}catch{}}
 function assetURL(url){return (window.TRAVEL_ASSETS&&window.TRAVEL_ASSETS[url])||A+url}function img(url){const i=new Image();i.src=assetURL(url);return i}
 for(const c of CHAPTERS)for(let m=0;m<3;m++)assets[`${c.key}-${m}`]=img(`${c.key}-${m+1}.jpg`);
 for(const kind of Object.keys(SHELLS))for(let i=0;i<2;i++)assets[`crab-${kind}-${i}`]=img(`crab-${kind}-${i}.png`);
 assets.epilogue=img('epilogue.jpg');
+// New artwork is activated only when both original JPEGs are available.
+const NEW_NAMES=['01-hermits-house.jpg','02-open-sandy-beach.jpg'], NEW_W=1536*MH/938, K=MH/938;
+let newGolden=false,newReady=false,terrainDebug=false;
+const newImages=NEW_NAMES.map(name=>new Promise(resolve=>{
+ const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src=assetURL(name);
+}));
+const newAssetsReady=Promise.all(newImages).then(images=>{
+ if(images.every(im=>im&&im.naturalWidth===1536&&im.naturalHeight===938)){
+  assets['golden-new-0']=images[0];assets['golden-new-1']=images[1];newReady=true;
+ }return newReady;
+});
+async function waitForNewArt(){await Promise.race([newAssetsReady,new Promise(resolve=>setTimeout(resolve,5000))]);}
+function moduleWidth(ch,m){return newGolden&&ch===0&&m<2?NEW_W:MW}
+function moduleStart(ch,m){let x=0;for(let i=0;i<m;i++)x+=moduleWidth(ch,i);return x}
+function chapterWidth(ch){return moduleStart(ch,3)}
+function moduleAt(ch,x){return x<moduleStart(ch,1)?0:x<moduleStart(ch,2)?1:2}
+function legacyX(ch,x){const m=Math.max(0,Math.min(2,Math.floor(x/MW)));return moduleStart(ch,m)+(x-m*MW)*moduleWidth(ch,m)/MW}
+const nativeGround=[
+ [[0,640],[100,637],[220,630],[350,628],[480,636],[600,641],[730,640],[850,638],[980,637],[1100,628],[1230,620],[1330,609],[1430,590],[1536,588]],
+ [[0,588],[100,588],[180,607],[260,620],[350,620],[480,633],[600,645],[730,650],[850,651],[1000,650],[1100,650],[1250,645],[1380,638],[1536,626/K]]
+];
+const nativePlatforms=[
+ [[[798,519],[865,514],[1000,511],[1110,507],[1180,508]]],
+ [[[220,528],[270,515],[350,501],[425,503]]]
+];
+function nativeLine(m,points){return points.map(([x,y])=>[m*NEW_W+x*K,y*K])}
+const goldenSurfaces=[
+ [...nativeLine(0,nativeGround[0]),...nativeLine(1,nativeGround[1]).slice(1),[2*NEW_W+MW,626]],
+ ...nativePlatforms.flatMap((lines,m)=>lines.map(line=>nativeLine(m,line))),
+ ...CHAPTERS[0].platforms[2].map(([a,b,y])=>[[2*NEW_W+a,y],[2*NEW_W+b,y]])
+];
+function lineY(points,x){if(x<points[0][0]||x>points[points.length-1][0])return null;
+ for(let i=1;i<points.length;i++){const [a,y]=points[i-1],[b,z]=points[i];if(x<=b)return y+(z-y)*(x-a)/(b-a)}return null}
+function floorAt(ch,x){return newGolden&&ch===0?(lineY(goldenSurfaces[0],Math.max(0,Math.min(chapterWidth(ch),x)))??CHAPTERS[ch].floor):CHAPTERS[ch].floor}
+function newLanding(prevX,prevY,wasGrounded){
+ let result=null;
+ for(const line of goldenSurfaces){const y=lineY(line,state.x),before=lineY(line,prevX);if(y===null)continue;
+  const follow=wasGrounded&&before!==null&&Math.abs(prevY-before)<=5&&state.vy>=0;
+  const crossed=state.vy>=0&&prevY<=(before??y)+4&&state.y>=y;
+  if(follow||crossed){if(result===null||y<result)result=y}
+ }return result;
+}
+window.addEventListener('keydown',e=>{if(e.code==='KeyG'&&!e.repeat&&state.mode==='game')terrainDebug=!terrainDebug;});
 document.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('selectstart',e=>e.preventDefault());function mode(name){state.mode=name;$('home').classList.toggle('visible',name==='home');$('game').classList.toggle('visible',name==='game');if(name==='game'){resize();requestAnimationFrame(resize)}else clearHeld()}
 function initialCollection(ch){return CHAPTERS[ch].specimens.map((name,i)=>({x:ch*0+210+i*920+([0,90,200,0,60][i]),id:`${ch}-${i}`,name,got:!!state.collections[`${ch}-${i}`]}))}
-function enterChapter(ch,resetPosition=true){state.chapter=ch;const C=CHAPTERS[ch];if(resetPosition){state.x=120;state.y=C.floor-1;state.vx=0;state.vy=0;state.health=3;state.broken=false}clearHeld();state.vx=0;state.vy=0;jumps=0;state.checkpoint=110;state.picks=initialCollection(ch);state.paused=false;state.invincible=0;updateHud();mode('game');note(C.descs[0]+' · Explore and discover.',2700);save()}
-function begin(){state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
-function resume(){const s=safeGet();if(!s){begin();return}Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);state.x=Math.max(100,s.x||100);state.y=CHAPTERS[state.chapter].floor-1;state.picks=initialCollection(state.chapter);state.health=Math.max(1,state.health);updateHud()}
+function enterChapter(ch,resetPosition=true){state.chapter=ch;const C=CHAPTERS[ch];if(resetPosition){state.x=120;state.y=floorAt(ch,state.x)-1;state.ground=false;state.vx=0;state.vy=0;state.health=3;state.broken=false}clearHeld();state.vx=0;state.vy=0;jumps=0;state.checkpoint=110;state.picks=initialCollection(ch);state.paused=false;state.invincible=0;updateHud();mode('game');note(C.descs[0]+' · Explore and discover.',2700);save()}
+async function begin(){await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
+async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(newGolden&&s.layout!=='golden-v2')x=legacyX(0,x);else if(!newGolden&&s.layout==='golden-v2'){const m=x<NEW_W?0:x<2*NEW_W?1:2;x=m*MW+(x-m*NEW_W)*(m<2?MW/NEW_W:1)}}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
 function shellIcon(kind){return assetURL(`crab-${kind}-0.png`)}
 function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=C.title;$('chapterName').textContent=C.name;const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('hearts').textContent='♥ '.repeat(state.health)+'♡ '.repeat(3-state.health);const slots=$('shellSlots');slots.innerHTML='';for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;const im=document.createElement('img');im.src=shellIcon(kind);im.alt='';b.append(im);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
 function equip(kind){if(!state.available.includes(kind))return;state.shell=kind;tone(510);updateHud();save();note(`${SHELLS[kind].name} Shell · ${SHELLS[kind].ability}`,1800)}
@@ -42,36 +85,37 @@ function jump(){if(state.mode!=='game'||state.paused||controls.hide)return;if(st
 function groundSegments(ch){let seg=[];for(let m=0;m<3;m++){const left=m*MW,right=(m+1)*MW,C=CHAPTERS[ch];if(ch===3&&m===1){seg.push([left,left+370,C.floor],[left+1320,right,C.floor]);for(let [a,b,y] of C.platforms[m])seg.push([left+a,left+b,y])}else if(ch===0&&m===1){seg.push([left,left+585,C.floor],[left+760,right,C.floor]);seg.push([left+585,left+760,C.floor-72])}else{seg.push([left,right,C.floor])}for(let [a,b,y] of C.platforms[m]){if(ch===3&&m===1)continue;seg.push([left+a,left+b,y])}}return seg}
 let segments=CHAPTERS.map((_,i)=>groundSegments(i));
 function breakWall(){if(state.broken)return;state.broken=true;state.vx=135;tone(290);note('The granite shell fractures the ancient stone!',2500);save()}
-function hurt(message){if(state.invincible>0)return;state.health--;state.invincible=1.7;clearHeld();tone(240);if(state.health<=0){state.health=3;state.x=state.checkpoint;note('The traveler retreats into its shell · Checkpoint',2000)}else note(message||'Careful! One heart lost.',1700);state.y=CHAPTERS[state.chapter].floor-40;state.vy=0;state.vx=0;state.ground=false;jumps=0;updateHud();save()}
+function hurt(message){if(state.invincible>0)return;state.health--;state.invincible=1.7;clearHeld();tone(240);if(state.health<=0){state.health=3;state.x=state.checkpoint;note('The traveler retreats into its shell · Checkpoint',2000)}else note(message||'Careful! One heart lost.',1700);state.y=floorAt(state.chapter,state.x)-40;state.vy=0;state.vx=0;state.ground=false;jumps=0;updateHud();save()}
 function finishChapter(){state.paused=true;clearHeld();const C=CHAPTERS[state.chapter];save();if(state.chapter===3){mode('home');showDialog('Homecoming','<p>The little traveler has crossed the golden shore, coral gardens, crystal caverns and sea of stars.</p><p>The most extraordinary shell may be the one that feels like home.</p>',[{text:'See the Homecoming',fn:()=>{mode('home');showEpilogue()}},{text:'Return to Main Menu',fn:()=>{closeDialog();mode('home')}}]);return}
 const next=CHAPTERS[state.chapter+1];showDialog(`${C.name} · Complete`,`<p>You reached the end of this three-module prototype chapter.</p><p>Continue into <strong>${next.name}</strong>?</p>`,[{text:`Enter ${next.name}`,fn:()=>{closeDialog();enterChapter(state.chapter+1)}},{text:'Home',fn:()=>{closeDialog();mode('home')}}])}
-function progress(dt){if(state.mode!=='game'||state.paused)return;const C=CHAPTERS[state.chapter],m=Math.min(2,Math.floor(state.x/MW));state.checkpoint=Math.max(110,Math.floor(state.x/MW)*MW+105);
- if(m===0&&state.x>MW*.36)unlock(C.unlock);
+function progress(dt){if(state.mode!=='game'||state.paused)return;const C=CHAPTERS[state.chapter],m=moduleAt(state.chapter,state.x);state.checkpoint=Math.max(110,moduleStart(state.chapter,m)+105);
+ if(m===0&&state.x>moduleWidth(state.chapter,0)*.36)unlock(C.unlock);
  if(state.chapter===2&&m===1&&!state.broken){const wall=MW+855;if(state.x>wall-85&&state.x<wall+45){if(state.shell==='heavy'&&(controls.right||controls.hide)){breakWall()}else if(state.vx>0){state.x=wall-85;state.vx=0;if(performance.now()%1200<dt*1000)note('A fractured wall · Try the Granite Shell',1600)}}}
- const prevY=state.y;const wanted=(+!!controls.right)-(+!!controls.left);
+ const prevY=state.y,prevX=state.x,wasGrounded=state.ground;const wanted=(+!!controls.right)-(+!!controls.left);
  const maxspeed=controls.hide?0:state.shell==='heavy'?215:350;
  if(wanted){const target=wanted*maxspeed;state.vx+=(target-state.vx)*Math.min(1,dt*(state.ground?12:8))}else state.vx*=Math.exp(-12*dt);
- state.x+=state.vx*dt;state.x=Math.max(66,Math.min(3*MW+80,state.x));
+ state.x+=state.vx*dt;state.x=Math.max(66,Math.min(chapterWidth(state.chapter)+80,state.x));
  state.vy+=(state.shell==='float'&&!state.ground?GRAV*.34:GRAV)*dt;state.y+=state.vy*dt;state.ground=false;
- const sh=segments[state.chapter];let landed=null;for(const [x1,x2,y] of sh){if(state.x+31>x1&&state.x-31<x2&&prevY<=y+4&&state.y>=y&&state.vy>=0){if(landed===null||y<landed)landed=y}}
+ const sh=segments[state.chapter];let landed=null;if(newGolden&&state.chapter===0){landed=newLanding(prevX,prevY,wasGrounded)}else for(const [x1,x2,y] of sh){if(state.x+31>x1&&state.x-31<x2&&prevY<=y+4&&state.y>=y&&state.vy>=0){if(landed===null||y<landed)landed=y}}
  if(landed!==null){state.y=landed;state.vy=0;state.ground=true;jumps=0}
  const water=state.chapter===3&&m===1&&state.x>MW+370&&state.x<MW+1320;
  if(water&&state.shell==='float'&&!state.ground&&state.y>590){state.y=590;state.vy=0;state.ground=true;jumps=0;state.vx*=.96}
  if(state.y>880)hurt(water?'Deep water · Use the Floating Shell!':'You fell into the tide pool.');
- if(m>0&&state.x>MW*m+110&&state.checkpoint!==MW*m+110)save();
+ const nextModule=moduleAt(state.chapter,state.x);if(nextModule!==m)save();
  for(const item of state.picks||[]){if(!item.got&&Math.abs(item.x-state.x)<64&&Math.abs(item.y-state.y)<110){item.got=true;state.collections[item.id]=true;tone(880);note(`Encyclopedia specimen: ${item.name}`,2200);updateHud();save()}}
- if(state.x>=3*MW-110)finishChapter();
+ if(state.x>=chapterWidth(state.chapter)-110)finishChapter();
  state.invincible=Math.max(0,state.invincible-dt);state.anim+=dt;
 }
-function makePickups(){const C=CHAPTERS[state.chapter];state.picks=C.specimens.map((name,i)=>({x:350+i*890+(i%2)*170,y:C.floor-35-(i===2?75:0),id:`${state.chapter}-${i}`,name,got:!!state.collections[`${state.chapter}-${i}`]}))}
-const oldEnter=enterChapter;enterChapter=function(ch,reset=true){oldEnter(ch,reset);makePickups()};
-function resize(){const r=canvas.getBoundingClientRect(),dpr=Math.min(3,devicePixelRatio||1);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);cx.setTransform(dpr,0,0,dpr,0,0);state.viewW=Math.max(1,r.width);state.viewH=Math.max(1,r.height);state.zoom=r.width<650&&r.height>r.width?1.045:1;state.scale=state.viewH/MH*state.zoom;state.originY=(state.viewH-MH*state.scale)/2}
+function makePickups(){const C=CHAPTERS[state.chapter];state.picks=C.specimens.map((name,i)=>{const x=legacyX(state.chapter,350+i*890+(i%2)*170);return {x,y:floorAt(state.chapter,x)-35-(i===2?75:0),id:`${state.chapter}-${i}`,name,got:!!state.collections[`${state.chapter}-${i}`]}})}
+const oldEnter=enterChapter;enterChapter=function(ch,reset=true){newGolden=ch===0&&newReady;oldEnter(ch,reset);makePickups()};
+function resize(){const r=canvas.getBoundingClientRect(),dpr=Math.min(3,devicePixelRatio||1);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);cx.setTransform(dpr,0,0,dpr,0,0);state.viewW=Math.max(1,r.width);state.viewH=Math.max(1,r.height);state.zoom=newGolden?1:r.width<650&&r.height>r.width?1.045:1;state.scale=state.viewH/MH*state.zoom;state.originY=(state.viewH-MH*state.scale)/2}
 window.addEventListener('resize',resize);resize();
 function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;const C=CHAPTERS[state.chapter],S=state.scale,W=state.viewW,H=state.viewH;
  cx.save();cx.clearRect(0,0,W,H);cx.fillStyle=C.palette;cx.fillRect(0,0,W,H);
- const camera=Math.max(0,Math.min(3*MW-W/S,state.x-W/S*.40));state.cam=camera;
- for(let m=0;m<3;m++){const ox=(m*MW-camera)*S; if(ox>W+2||ox+MW*S<0)continue;const im=assets[`${C.key}-${m}`];if(im.complete&&im.naturalWidth)cx.drawImage(im,ox,state.originY,MW*S,MH*S)}
+ const camera=Math.max(0,Math.min(chapterWidth(state.chapter)-W/S,state.x-W/S*.40));state.cam=camera;
+ for(let m=0;m<3;m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&m<2?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth)cx.drawImage(im,ox,state.originY,width*S,MH*S)}
  cx.save();cx.translate(-camera*S,state.originY);cx.scale(S,S);
+ if(terrainDebug){cx.save();cx.strokeStyle='#65ff9c';cx.lineWidth=3;const lines=newGolden?goldenSurfaces:segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]);for(const line of lines){cx.beginPath();line.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.stroke()}cx.restore()}
  // Interactable cracked wall, separate from background.
  if(state.chapter===2&&!state.broken){const x=MW+845,y=CHAPTERS[2].floor;cx.fillStyle='#a28bb5cd';cx.strokeStyle='#e6c8de';cx.lineWidth=5;cx.beginPath();cx.moveTo(x-10,y);cx.lineTo(x-8,y-165);cx.lineTo(x+65,y-167);cx.lineTo(x+63,y);cx.closePath();cx.fill();cx.stroke();cx.strokeStyle='#583e72';cx.lineWidth=3;cx.beginPath();cx.moveTo(x+20,y-165);cx.lineTo(x+44,y-122);cx.lineTo(x+15,y-76);cx.lineTo(x+38,y-29);cx.stroke()}
  for(const item of state.picks||[]){if(item.got)continue;cx.font='55px serif';cx.textAlign='center';cx.shadowColor='#fff2b9';cx.shadowBlur=18;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0}
@@ -87,5 +131,5 @@ function settings(){showDialog('Settings',`<p>Sound: <strong>${state.sound?'On':
 function showEpilogue(){showDialog('Homecoming',`<img src="${assetURL('epilogue.jpg')}" alt="Homecoming painting" style="max-width:100%;border-radius:12px"><p>The traveler returns with four different homes, and a world of memories.</p>`,[{text:'Return Home',fn:()=>{closeDialog();mode('home')}}])}
 $('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',()=>{state.sound=!state.sound;$('muteMark').textContent=state.sound?'':'×';$('soundHome').setAttribute('aria-pressed',String(!state.sound))});
 // Help testing without exposing implementation details in the interface.
-window.travelerDebug={state,CHAPTERS,goToChapter:n=>enterChapter(Math.max(0,Math.min(3,n))),advanceToEnd:()=>{state.x=3*MW-130;state.y=CHAPTERS[state.chapter].floor;},save};
+window.travelerDebug={state,CHAPTERS,goToChapter:n=>enterChapter(Math.max(0,Math.min(3,n))),advanceToEnd:()=>{state.x=chapterWidth(state.chapter)-130;state.y=floorAt(state.chapter,state.x);},setTerrainDebug:value=>{terrainDebug=!!value},getTerrain:()=>newGolden?goldenSurfaces:segments[state.chapter],newArtReady:()=>newReady,save};
 })();
