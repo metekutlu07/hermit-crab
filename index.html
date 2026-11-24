@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#27655f">
+<title>A Traveler in a Shell · Playable Game</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+  <section id="home" class="screen visible" aria-label="Game home screen">
+    <div class="home-art"><picture><source media="(orientation: portrait)" srcset="assets/home-mobile.jpg"><img src="assets/home-desktop.jpg" alt="A Traveler in a Shell, a watercolor hermit crab on a beach" draggable="false"></picture><div class="home-buttons" aria-label="Main menu">
+      <button id="begin" aria-label="Begin Journey">Begin Journey</button>
+      <button id="collection" aria-label="Shell Collection">Shell Collection</button>
+      <button id="continue" aria-label="Continue Journey">Continue Journey</button>
+      <button id="settingsHome" aria-label="Settings">Settings</button>
+    </div>
+    <button id="soundHome" class="home-sound" aria-label="Toggle sound"><span aria-hidden="true" id="muteMark"></span></button></div><noscript><div class="js-warning">This file preview does not run JavaScript. Open the downloaded HTML in a web browser to play.</div></noscript>
+  </section>
+
+  <section id="game" class="screen" aria-label="Side scrolling platform game">
+    <canvas id="stage" aria-label="Watercolor side-scrolling world"></canvas>
+    <div id="hudTop" class="game-hud-art" aria-hidden="true"></div>
+    <div id="statusLeft" class="hud-top-item" aria-label="Health"><span id="hearts">♥ ♥ ♥</span></div>
+    <div id="chapterTitle" class="hud-top-item"><small id="chapterIndex">CHAPTER I</small><span id="chapterName">Golden Shores</span></div>
+    <div id="statusRight" class="hud-top-item"><span>◉ <span id="collectedCount">0</span>/5</span><button id="pauseBtn" aria-label="Pause and menu">☰</button></div>
+    <div id="hudBottom" class="game-hud-art" aria-hidden="true"></div>
+    <div id="controls" aria-label="Game controls">
+      <div class="control-set movement"><button id="left" class="ctrl" aria-label="Move left">‹</button><button id="right" class="ctrl" aria-label="Move right">›</button></div>
+      <div id="shellSlots" class="control-set shells" aria-label="Shell selection"></div>
+      <div class="control-set actions"><button id="hide" class="ctrl action" aria-label="Hide">⌂<span>Hide</span></button><button id="jump" class="ctrl action" aria-label="Jump">↑<span>Jump</span></button></div>
+    </div>
+    <div id="message" role="status" aria-live="polite"></div>
+  </section>
+
+  <section id="overlay" class="screen overlay" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+      <h2 id="dialogTitle"></h2>
+      <div id="dialogBody"></div>
+      <div id="dialogButtons"></div>
+    </div>
+  </section>
+</main>
+<script src="game.js"></script>
+</body>
+</html>
