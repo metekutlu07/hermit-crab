@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#27655f">
+<meta name="theme-color" content="#302846">
 <title>A Traveler in a Shell · Playable Game</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=graphic01">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 </head>
 <body>
 <main id="app">
@@ -21,15 +22,17 @@
 
   <section id="game" class="screen" aria-label="Side scrolling platform game">
     <canvas id="stage" aria-label="Watercolor side-scrolling world"></canvas>
-    <div id="hudTop" class="game-hud-art" aria-hidden="true"></div>
-    <div id="statusLeft" class="hud-top-item" aria-label="Health"><span id="hearts">♥ ♥ ♥</span></div>
-    <div id="chapterTitle" class="hud-top-item"><small id="chapterIndex">CHAPTER I</small><span id="chapterName">Golden Shores</span></div>
-    <div id="statusRight" class="hud-top-item"><span>◉ <span id="collectedCount">0</span>/5</span><button id="pauseBtn" aria-label="Pause and menu">☰</button></div>
-    <div id="hudBottom" class="game-hud-art" aria-hidden="true"></div>
+    <header class="game-hud" aria-label="Chapter and status">
+      <div id="chapterTitle" class="hud-top-item"><small id="chapterIndex">CHAPTER I</small><span id="chapterName">Golden Shores</span></div>
+      <div class="status-strip">
+        <div id="statusLeft" class="hud-top-item" aria-label="Health"><span id="hearts">♥ ♥ ♥</span></div>
+        <div id="statusRight" class="hud-top-item"><span class="collection-count" aria-label="Shells collected"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c-4-2-9-6-9-10a4 4 0 0 1 5-4 4 4 0 0 1 8 0 4 4 0 0 1 5 4c0 4-5 8-9 10zM12 20 8 6m4 14 4-14m-4 14V3"/></svg><span id="collectedCount">0</span><span class="count-total">/5</span></span><button id="pauseBtn" aria-label="Pause and menu"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14M5 16h14"/></svg></button></div>
+      </div>
+    </header>
     <div id="controls" aria-label="Game controls">
-      <div class="control-set movement"><button id="left" class="ctrl" aria-label="Move left">‹</button><button id="right" class="ctrl" aria-label="Move right">›</button></div>
+      <div class="control-set movement"><button id="left" class="ctrl" aria-label="Move left"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m6-6-6 6 6 6"/></svg></button><button id="right" class="ctrl" aria-label="Move right"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div>
       <div id="shellSlots" class="control-set shells" aria-label="Shell selection"></div>
-      <div class="control-set actions"><button id="hide" class="ctrl action" aria-label="Hide">⌂<span>Hide</span></button><button id="jump" class="ctrl action" aria-label="Jump">↑<span>Jump</span></button></div>
+      <div class="control-set actions"><button id="hide" class="ctrl action" aria-label="Hide"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15a8 8 0 0 1 16 0v3H4zM8 15a4 4 0 0 1 8 0"/></svg><span>Hide</span></button><button id="jump" class="ctrl action" aria-label="Jump"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg><span>Jump</span></button></div>
     </div>
     <div id="message" role="status" aria-live="polite"></div>
   </section>
@@ -42,6 +45,6 @@
     </div>
   </section>
 </main>
-<script src="game.js"></script>
+<script src="game.js?v=graphic01"></script>
 </body>
 </html>
