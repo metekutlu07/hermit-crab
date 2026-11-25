@@ -118,7 +118,8 @@ function drawGoldenSprite(){
  if(!goldenArtReady())return false;
  const w=152,h=w*GOLDEN_CELL_H/GOLDEN_CELL_W;
  cx.save();cx.translate(state.x,state.y);cx.scale(pose.facing,1);
- cx.drawImage(im,(pose.frame%2)*GOLDEN_CELL_W,Math.floor(pose.frame/2)*GOLDEN_CELL_H,GOLDEN_CELL_W,GOLDEN_CELL_H,-w/2,-h,w,h);
+ const idle=pose.mode==='idle'&&!controls.hide&&window.CrabIdle?.gameFrame(im,goldenAnim.elapsed);
+ if(idle)cx.drawImage(idle,-w/2,-h,w,h);else cx.drawImage(im,(pose.frame%2)*GOLDEN_CELL_W,Math.floor(pose.frame/2)*GOLDEN_CELL_H,GOLDEN_CELL_W,GOLDEN_CELL_H,-w/2,-h,w,h);
  cx.restore();return true;
 }
 assets.epilogue=img('epilogue.jpg');
@@ -304,7 +305,7 @@ function setupEntryGate(){
 
 // Select a homepage color using ?theme=white, lavender or teal. Default: lavender.
 const requestedHomeTheme=new URLSearchParams(location.search).get('theme');
-const homeTheme=['white','lavender','teal'].includes(requestedHomeTheme)?requestedHomeTheme:'lavender';
+const homeTheme=['white','lavender','teal'].includes(requestedHomeTheme)?requestedHomeTheme:'teal';
 document.querySelector('.home-art').setAttribute('data-home-theme',homeTheme);
 setupEntryGate();
 // Help testing without exposing implementation details in the interface.

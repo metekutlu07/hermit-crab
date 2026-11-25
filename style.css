@@ -246,3 +246,12 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #home .home-art.clean-home[data-home-theme="white"] .home-title,
 #home .home-art.clean-home[data-home-theme="white"] .home-buttons button{text-shadow:0 1px 4px #61483d99}
 #home .home-art.clean-home[data-home-theme="white"] .home-buttons button{box-shadow:0 0 0 1px #61483d26}
+
+/* Exact original crab artwork, animated on an independent pixel layer. */
+#home #homeCrabLayer{position:absolute;z-index:1;pointer-events:none;display:block;width:0;height:0;visibility:hidden}
+#home #homeCrabLayer.ready{visibility:visible}
+#home .home-art.clean-home .home-title{top:4.5%;line-height:1.16}
+@media(orientation:portrait){
+ #home .home-art.clean-home .home-title{top:9%;line-height:1.17}
+ #home .home-art.clean-home .home-title span+span{margin-top:.04em}
+}
