@@ -47,6 +47,7 @@ const GOLDEN_CELL_W=320,GOLDEN_CELL_H=280;
 const GOLDEN_HIDDEN=img('crab-golden-hidden.png');
 const specimenFiles=['scallop','cowrie','cockle','limpet','moon-snail'].map(n=>'specimen-'+n+'.png');
 const specimenArt=specimenFiles.map(f=>img(f));
+const painterlySpecimenArt=specimenFiles.map(f=>img(f.replace('.png','-painted.png')));
 const goldenAnim={mode:'idle',elapsed:0,facing:1,lastTime:0,lastGround:false};
 function imageReady(im){return !!(im&&im.complete&&im.naturalWidth>0&&im.naturalHeight>0)}
 function goldenArtReady(){return Object.values(GOLDEN_ANIMS).every(im=>imageReady(im)&&im.naturalWidth===640&&im.naturalHeight===560)}
@@ -290,24 +291,27 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  if(state.chapter===2&&!state.broken){const x=MW+845,y=CHAPTERS[2].floor;cx.fillStyle='#a28bb5cd';cx.strokeStyle='#e6c8de';cx.lineWidth=5;cx.beginPath();cx.moveTo(x-10,y);cx.lineTo(x-8,y-165);cx.lineTo(x+65,y-167);cx.lineTo(x+63,y);cx.closePath();cx.fill();cx.stroke();cx.strokeStyle='#583e72';cx.lineWidth=3;cx.beginPath();cx.moveTo(x+20,y-165);cx.lineTo(x+44,y-122);cx.lineTo(x+15,y-76);cx.lineTo(x+38,y-29);cx.stroke()}
  for(const item of state.picks||[]){
  if(item.got)continue;
- const im=specimenArt[item.artIndex];
+ const painted=painterlySpecimenArt[item.artIndex];
+ const im=imageReady(painted)?painted:specimenArt[item.artIndex];
  if(imageReady(im)){
   const w=[142,142,142,144,148][item.artIndex],h=w*im.naturalHeight/im.naturalWidth;
-  const phase=state.anim*2.15+item.artIndex*1.7;
-  const bottom=item.raised?item.y+Math.sin(phase)*4:item.y+22;
+  const phase=state.anim*1.85+item.artIndex*1.7;
+  const bottom=item.raised?item.y+Math.sin(phase)*8:item.y+22;
   // A soft, warm pearlescent rim follows the transparent silhouette.
   cx.save();
-  cx.shadowColor='rgba(255,245,204,.85)';cx.shadowBlur=10+4*(.5+.5*Math.sin(phase));
+  cx.shadowColor='rgba(255,243,190,.95)';cx.shadowBlur=22+8*(.5+.5*Math.sin(phase));
+  cx.drawImage(im,item.x-w/2,bottom-h,w,h);
+  cx.shadowColor='rgba(255,252,222,.9)';cx.shadowBlur=9;
   cx.drawImage(im,item.x-w/2,bottom-h,w,h);
   cx.restore();
   // A few small, intermittent hand-painted-looking glints, not a neon ring.
   cx.save();cx.fillStyle='#fff8df';
-  const glints=[[-.37,.20,0],[.36,.28,1.9],[.15,.07,3.8]];
+  const glints=[[-.50,.20,0],[.49,.28,1.4],[.15,-.06,2.8],[-.43,.82,4.2],[.43,.76,5.6]];
   for(const [dx,dy,offset] of glints){
-   const twinkle=Math.pow(Math.max(0,Math.sin(phase+offset)),5);
+   const twinkle=Math.pow(Math.max(0,Math.sin(phase+offset)),2);
    if(twinkle<.04)continue;
-   const gx=item.x+dx*w,gy=bottom-h+dy*h,rr=3+4*twinkle;
-   cx.globalAlpha=.82*twinkle;cx.beginPath();
+   const gx=item.x+dx*w,gy=bottom-h+dy*h,rr=4+8*twinkle;
+   cx.globalAlpha=.95*twinkle;cx.shadowColor='#fff0b8';cx.shadowBlur=8*twinkle;cx.beginPath();
    cx.moveTo(gx,gy-rr);cx.quadraticCurveTo(gx+1.1,gy-1.1,gx+rr*.72,gy);
    cx.quadraticCurveTo(gx+1.1,gy+1.1,gx,gy+rr);
    cx.quadraticCurveTo(gx-1.1,gy+1.1,gx-rr*.72,gy);
