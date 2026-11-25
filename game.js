@@ -52,6 +52,7 @@ function primeAudio(){
   }
   // Resume synchronously from a real button gesture (including Safari).
   const pending=audio.resume();
+  if(audio.state!=='running'){try{const unlock=audio.createBufferSource();unlock.buffer=audio.createBuffer(1,128,audio.sampleRate);unlock.connect(audio.destination);unlock.start(0);unlock.onended=()=>unlock.disconnect()}catch{}}
   pending?.then(()=>{syncSoundButtons();updateAtmosphere()}).catch(()=>syncSoundButtons());
   if(audio.state==='running')updateAtmosphere();
  }catch(err){console.warn('Audio could not start',err)}
@@ -170,7 +171,7 @@ const testModule=Number(new URLSearchParams(location.search).get('testModule'))|
 let newGolden=false,newReady=false,terrainDebug=false,loadedCount=0;
 const defaults=window.GOLDEN_TERRAIN;
 let terrain=defaults;
-try{const v=JSON.parse(localStorage.getItem('goldenTerrainV2')||'null');if(Array.isArray(v)&&v.length===defaults.length)terrain=v.map((m,i)=>({...defaults[i],ground:m.ground,platforms:m.platforms,walls:m.walls||defaults[i].walls,hazards:m.hazards||defaults[i].hazards}));}catch{}
+try{const v=JSON.parse(localStorage.getItem('goldenTerrainV3')||'null');if(Array.isArray(v)&&v.length===defaults.length)terrain=v.map((m,i)=>({...defaults[i],ground:m.ground,platforms:m.platforms,walls:m.walls||defaults[i].walls,hazards:m.hazards||defaults[i].hazards}));}catch{}
 const newWidths=defaults.map(m=>MH*m.width/m.height),newModule=defaults.map(()=>false);
 function loadPainting(name){return new Promise(resolve=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src=assetURL(name)})}
 async function choosePainting(primary,fallback){return (await loadPainting(primary))||(fallback?await loadPainting(fallback):null)}
@@ -244,8 +245,10 @@ function newLanding(prevX,prevY,wasGrounded){
  let result=null;
  for(const line of goldenSurfaces){const y=lineY(line,state.x),before=lineY(line,prevX);if(y===null)continue;
   const follow=wasGrounded&&before!==null&&Math.abs(prevY-before)<=5&&state.vy>=0;
+  // Cross a touching seam or a small step without snapping onto a high background ledge.
+  const seam=wasGrounded&&before===null&&state.vy>=0&&Math.abs(y-prevY)<=Math.min(16,4+Math.abs(state.x-prevX)*1.5);
   const crossed=state.vy>=0&&prevY<=(before??y)+4&&state.y>=y;
-  if(follow||crossed){if(result===null||y<result)result=y}
+  if(follow||seam||crossed){if(result===null||y<result)result=y}
  }return result;
 }
 window.addEventListener('keydown',e=>{if(e.code==='KeyG'&&!e.repeat&&state.mode==='game')terrainDebug=!terrainDebug;});
@@ -301,7 +304,7 @@ function makePickups(){
  const C=CHAPTERS[state.chapter];
  if(newGolden&&state.chapter===0){
   // Source-image coordinates, with positions snapped to existing collision surfaces.
-  const places=[{m:1,x:350,platform:0},{m:3,x:580,platform:1},{m:5,x:810,platform:3},{m:7,x:850,platform:1},{m:9,x:750,platform:0}];
+  const places=[{m:1,x:350,platform:0},{m:3,x:400,platform:0},{m:5,x:810,platform:3},{m:7,x:850,platform:0},{m:9,x:750,platform:0}];
   state.picks=C.specimens.flatMap((name,i)=>{
    const p=places[i];if(p.m>=loadedCount)return [];
    const x=moduleStart(0,p.m)+p.x*moduleWidth(0,p.m)/defaults[p.m].width;
