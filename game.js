@@ -261,3 +261,22 @@ $('begin').addEventListener('click',begin);$('continue').addEventListener('click
 if(testModule)newAssetsReady.then(()=>{if(newReady){enterChapter(0);const m=Math.max(0,Math.min(loadedCount-1,testModule-1));state.x=safeSpawn(m);state.y=floorAt(0,state.x)-1;state.ground=false;terrainDebug=true;note('Terrain test · Module '+String(m+1).padStart(2,'0'),2400)}});
 window.travelerDebug={state,CHAPTERS,goToChapter:n=>enterChapter(Math.max(0,Math.min(3,n))),advanceToEnd:()=>{state.x=chapterWidth(state.chapter)-130;state.y=floorAt(state.chapter,state.x);},setTerrainDebug:value=>{terrainDebug=!!value},getTerrain:()=>newGolden?goldenSurfaces:segments[state.chapter],getObstacles:()=>({walls:goldenWalls,hazards:goldenHazards}),newArtReady:()=>newReady,goldenArtReady,save};
 })();
+
+/* Load the clean home illustrations individually; retain the old menu if missing. */
+(function setupGraphicHome(){
+ const art=document.querySelector('.home-art'),target=$('homeCleanImage');
+ if(!art||!target||typeof window.matchMedia!=='function')return;
+ const orientation=window.matchMedia('(orientation: portrait)');
+ let request=0;
+ function choose(){
+  const token=++request;
+  const name=orientation.matches?'home-portrait-final.jpeg':'home-landscape-final.jpeg';
+  const im=new Image();
+  im.onload=()=>{if(token!==request)return;target.src=im.src;art.classList.add('clean-home')};
+  im.onerror=()=>{if(token!==request)return;art.classList.remove('clean-home');target.removeAttribute('src')};
+  im.src=assetURL(name);
+ }
+ if(orientation.addEventListener)orientation.addEventListener('change',choose);
+ else if(orientation.addListener)orientation.addListener(choose);
+ choose();
+})();
