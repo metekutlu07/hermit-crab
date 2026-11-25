@@ -20,7 +20,7 @@ const ZH={
  'CHAPTER I':'第一章','CHAPTER II':'第二章','CHAPTER III':'第三章','CHAPTER IV':'第四章',
  'MENU':'菜单','Lives:':'生命：','Shells:':'贝壳：','HIDE':'躲藏','JUMP':'跳跃',
  'Traveler’s Journal':'旅人日志','Resume':'继续','Shell Encyclopedia':'贝壳图鉴','Terrain Editor':'地形编辑器','Restart Chapter':'重新开始本章','Main Menu':'主菜单','Back':'返回','Mute Sound':'关闭声音','Enable Sound':'开启声音','Homecoming':'归家','Return Home':'返回首页','Return to Main Menu':'返回主菜单','See the Homecoming':'查看归家故事','Next Chapter':'下一章',
- 'Pause the journey, consult your shell encyclopedia, or return to the beach.':'暂停旅程，查看贝壳图鉴，或返回海滩。','Collect specimens across the four chapters and discover their habitats.':'收集四个章节中的贝壳标本，探索它们的栖息地。','Undiscovered shell':'尚未发现的贝壳','Collected':'已收集','Sound:':'声音：','Progress is saved automatically in this browser.':'游戏进度会自动保存在此浏览器。','Desktop: ← → or A/D to move, Space to jump, H to hide.':'电脑：← → 或 A/D 移动，空格跳跃，H 躲藏。','Mobile: hold arrows and tap Jump simultaneously.':'手机：按住方向键，同时点击跳跃。',
+ 'Pause the journey, consult your shell encyclopedia, or return to the beach.':'暂停旅程，查看贝壳图鉴，或返回海滩。','Collect specimens across the four chapters and discover their habitats.':'收集四个章节中的贝壳标本，探索它们的栖息地。','Undiscovered shell':'尚未发现的贝壳','Collected':'已收集','Sound:':'声音：','Progress is saved automatically in this browser.':'游戏进度会自动保存在此浏览器。','Desktop: ← → to move, ↑ to jump, ↓ to hide.':'电脑：← → 移动，↑ 跳跃，↓ 躲藏。','Mobile: hold arrows and tap Jump simultaneously.':'手机：按住方向键，同时点击跳跃。',
  'Leaving Home':'离开家园','Explore and discover.':'探索与发现。','Tide pool · Try the jump again!':'潮池 · 再试一次跳跃！','You fell into the tide pool.':'你掉进了潮池。','Careful! One heart lost.':'小心！失去一点生命。','The traveler retreats into its shell · Checkpoint':'旅人退回壳中 · 返回检查点',
  'Scallop':'扇贝','Cowrie':'宝螺','Cockle':'鸟蛤','Limpet':'帽贝','Moon Snail':'月螺','Turret Shell':'塔螺','Cone Shell':'芋螺','Murex':'骨螺','Olive Shell':'榧螺','Abalone':'鲍鱼','Ammonite':'菊石','Fossil Gastropod':'腹足类化石','Fossil Bivalve':'双壳类化石','Nautilus':'鹦鹉螺','Mineral Shell':'矿物贝壳','Pearl Oyster':'珍珠贝','Paper Nautilus':'船蛸','Moon Abalone':'月鲍','Glass Shell':'玻璃贝壳','Starlight Shell':'星光贝壳',
  'Encyclopedia specimen:':'图鉴标本：','End of terrain test':'地形测试结束'
@@ -268,7 +268,7 @@ function release(id){if(!buttonPointers.has(id))return;const a=buttonPointers.ge
 function assign(id,a){buttonPointers.set(id,a);if(a==='jump')jump();else if(a==='hide')controls.hide=true;else controls[a]=true;const b=$(a);if(b)b.classList.add('pressed')}
 for(const a of ['left','right','jump','hide']){const b=$(a);b.addEventListener('pointerdown',e=>{e.preventDefault();if(state.mode!=='game'||state.paused)return;try{b.setPointerCapture(e.pointerId)}catch{}assign(e.pointerId,a)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,e=>{e.preventDefault();release(e.pointerId)});b.addEventListener('contextmenu',e=>e.preventDefault());b.addEventListener('dragstart',e=>e.preventDefault())}
 document.addEventListener('pointerup',e=>release(e.pointerId));document.addEventListener('pointercancel',e=>release(e.pointerId));window.addEventListener('blur',clearHeld);document.addEventListener('visibilitychange',()=>{if(document.hidden)clearHeld()});
-const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',ArrowUp:'jump',KeyW:'jump',KeyH:'hide',ShiftLeft:'hide'};
+const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',ArrowUp:'jump',KeyW:'jump',ArrowDown:'hide',KeyH:'hide',ShiftLeft:'hide'};
 window.addEventListener('keydown',e=>{if(state.mode!=='game'||state.paused)return;const a=KEYMAP[e.code];if(!a)return;e.preventDefault();if(a==='jump'){if(!e.repeat)jump()}else controls[a]=true});window.addEventListener('keyup',e=>{const a=KEYMAP[e.code];if(a&&a!=='jump')controls[a]=false});
 let jumps=0;
 function jump(){if(state.mode!=='game'||state.paused||controls.hide)return;if(state.ground){state.vy=newGolden?-940:-730;state.ground=false;jumps=1;tone(520)}else if(state.shell==='spring'&&jumps<2){state.vy=-670;jumps=2;tone(700)}}
@@ -289,14 +289,13 @@ function updateBird(dt){
  if(!newGolden||state.chapter!==0||testModule||!imageReady(birdArt))return;
  const m=moduleAt(0,state.x);
  if(!birdEvent&&state.ground&&[3,7,10].includes(m)&&!birdDone.has(m)&&state.x>=moduleStart(0,m)+moduleWidth(0,m)*(m===3?.24:.42)){
-  birdDone.add(m);birdEvent={t:0,warning:m===3?3.2:2.5,practice:m===3,resolved:false,x:state.x+1000};tone(1120);note('A bird is approaching. Hold HIDE!',(birdEvent.warning+.2)*1000);
+  birdDone.add(m);birdEvent={module:m,t:0,warning:m===3?3:2.5,resolved:false,x:state.x+1000};tone(1120);note('A bird is approaching. Hold HIDE!',(birdEvent.warning+.2)*1000);
  }
  const b=birdEvent;if(!b)return;b.t+=dt;b.x=state.x+(b.warning-b.t)*335;
  if(!b.resolved&&b.t>=b.warning){
   b.resolved=true;
   if(controls.hide)note('Safe inside your shell.',1800);
-  else if(b.practice)note('Your shell is your refuge. Hold HIDE next time.',2400);
-  else if(state.invincible<=0){state.health--;state.invincible=1.7;tone(240);if(state.health<=0){state.health=3;state.x=state.checkpoint;state.y=floorAt(0,state.x)-3;state.vx=state.vy=0;state.ground=false;clearHeld()}note('The bird caught you outside your shell.',1900);updateHud();save()}
+  else {birdDone.delete(b.module);birdEvent=null;state.invincible=0;hurt('The bird caught you outside your shell.');return}
  }
  if(b.t>b.warning+2)birdEvent=null;
 }
@@ -353,7 +352,7 @@ window.addEventListener('resize',resize);resize();
 function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;const C=CHAPTERS[state.chapter],S=state.scale,W=state.viewW,H=state.viewH;
  cx.save();cx.clearRect(0,0,W,H);cx.fillStyle=C.palette;cx.fillRect(0,0,W,H);
  const camera=Math.max(0,Math.min(chapterWidth(state.chapter)-W/S,state.x-W/S*.40));state.cam=camera;
- for(let m=0;m<moduleCount(state.chapter);m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&newModule[m]?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth)cx.drawImage(im,ox,state.originY,width*S,MH*S)}
+ for(let m=0;m<moduleCount(state.chapter);m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&newModule[m]?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth){cx.drawImage(im,ox,state.originY,width*S,MH*S);if(newGolden&&newModule[m]&&state.chapter===0)window.GoldenVegetation?.draw(cx,im,m,ox,state.originY,width*S,MH*S,state.anim,W)}}
  cx.save();cx.translate(-camera*S,state.originY);cx.scale(S,S);
  if(terrainDebug){cx.save();cx.lineWidth=3;const stroke=(lines,color,closed=false)=>{cx.strokeStyle=color;for(const l of lines){cx.beginPath();l.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));if(closed){cx.closePath();cx.fillStyle='rgba(75,195,255,.20)';cx.fill()}cx.stroke()}};
  if(newGolden){stroke(goldenGround,'#72ffac');stroke(goldenPlatforms,'#ffd56a');stroke(goldenWalls,'#ff657b');stroke(goldenHazards,'#63cbff',true)}else stroke(segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]),'#72ffac');cx.restore()}
@@ -388,14 +387,15 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
   if(imageReady(sprite)){cx.save();cx.translate(px,py);if(state.vx< -12)cx.scale(-1,1);cx.drawImage(sprite,-76,-116,152,116);cx.restore()}
  }
  cx.restore();cx.restore()}
-function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);updateAtmosphere();render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
+function updateBirdWarning(){const el=$('birdWarning'),b=birdEvent;const active=!!b&&!b.resolved&&state.mode==='game'&&!state.paused;el.hidden=!active;if(!active)return;const remaining=Math.max(0,b.warning-b.t);el.querySelector('span').textContent=(gameLanguage==='zh'?'按住躲藏键':'HOLD HIDE')+' · '+remaining.toFixed(1)+'s';el.querySelector('i').style.transform='scaleX('+Math.max(0,Math.min(1,remaining/b.warning))+')';}
+function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);updateBirdWarning();updateAtmosphere();render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
 function showDialog(title,html,buttons){state.paused=true;clearHeld();$('dialogTitle').textContent=tr(title);$('dialogBody').innerHTML=translatedText(html);const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=tr(b.text);btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
 document.addEventListener('visibilitychange',updateAtmosphere);
 function closeDialog(){state.chapterIntro=false;$('overlay').classList.remove('chapter-intro'); $('overlay').classList.remove('visible');$('overlay').setAttribute('aria-hidden','true');state.paused=false;clearHeld()}
 function pause(){showDialog('Traveler’s Journal','<p>Pause the journey, consult your shell encyclopedia, or return to the beach.</p>',[{text:'Resume',fn:closeDialog},{text:'Shell Encyclopedia',fn:encyclopedia},{text:'Settings',fn:settings},{text:'Terrain Editor',fn:()=>window.open('terrain.html','_blank')},{text:'Restart Chapter',fn:()=>{closeDialog();enterChapter(state.chapter);if(state.chapter===0&&!testModule)showGoldenIntro()}},{text:'Main Menu',fn:()=>{closeDialog();mode('home')}}])}
 function encyclopedia(){let html='<p class="progress">Collect specimens across the four chapters and discover their habitats.</p>';for(let c=0;c<4;c++){html+=`<h3>${CHAPTERS[c].name}</h3>`;CHAPTERS[c].specimens.forEach((s,i)=>{const got=state.collections[`${c}-${i}`];html+=`<div class="entry ${got?'':'locked'}"><span>${got?'🐚':'◇'} ${got?s:'Undiscovered shell'}</span><span>${got?'Collected':'?'}</span></div>`})}showDialog('Shell Encyclopedia',html,[{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
 function about(){const zh=gameLanguage==='zh';showDialog('About', '<p>'+ (zh?"《壳中旅人》是一场水彩世界中的冒险，讲述小寄居蟹螺仔离开海岸边的家，探索未知世界的故事。它穿越金色海岸、珊瑚花园、水晶洞穴与星之海，收集贝壳、发现新的能力，并寻找归家的道路。这是一段关于好奇心、脆弱、适应与归属的宁静旅程；每一次换壳，都是一次成长。":"A Traveler in a Shell is a watercolor adventure following Luo Zai, a little hermit crab who leaves its coastal home to discover an unfamiliar world. Across golden shores, coral gardens, crystal caverns and a sea of stars, the traveler collects shells, discovers new abilities and finds its own way home. A quiet journey about curiosity, vulnerability, adaptation and belonging, where every change of shell is a form of growth.") +'</p><p>Dalian, 2026</p>',[{text:'Back',fn:()=>closeDialog()}])}
-function settings(){showDialog('Settings',`<p>Sound: <strong>${state.sound?'On':'Off'}</strong></p><p>Desktop: ← → or A/D to move, Space to jump, H to hide.<br>Mobile: hold arrows and tap Jump simultaneously.</p><p>Progress is saved automatically in this browser.</p>`,[{text:state.sound?'Mute Sound':'Enable Sound',fn:()=>{setSound(!state.sound);settings()}},{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
+function settings(){showDialog('Settings',`<p>Sound: <strong>${state.sound?'On':'Off'}</strong></p><p>Desktop: ← → to move, ↑ to jump, ↓ to hide.<br>Mobile: hold arrows and tap Jump simultaneously.</p><p>Progress is saved automatically in this browser.</p>`,[{text:state.sound?'Mute Sound':'Enable Sound',fn:()=>{setSound(!state.sound);settings()}},{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
 function showEpilogue(){showDialog('Homecoming',`<img src="${assetURL('epilogue.jpg')}" alt="Homecoming painting" style="max-width:100%;border-radius:12px"><p>The traveler returns with four different homes, and a world of memories.</p>`,[{text:'Return Home',fn:()=>{closeDialog();mode('home')}}])}
 $('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('aboutHome').addEventListener('click',about);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',toggleSound);$('soundGame').addEventListener('click',toggleSound);
 
