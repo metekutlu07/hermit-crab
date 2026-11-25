@@ -14,10 +14,10 @@ function layout(){
  if(!w||!h||!bw||!bh)return false;
  const key=[w,h,bw,bh].join(':');if(key===lastLayout)return true;
  const portrait=bh>bw,sc=Math.max(w/bw,h/bh),iw=bw*sc,ih=bh*sc,ox=(w-iw)/2,oy=(h-ih)/2;
- const sw=iw*(portrait?.45:.202),sh=sw*ch/cw,center=ox+iw*(portrait?.49:.483),base=oy+ih*(portrait?.405:.443)+h*.025,sy=base-sh*367/ch;
+ const sw=iw*(portrait?.45:.202),sh=sw*ch/cw,center=ox+iw*(portrait?.49:.483),base=oy+ih*(portrait?.405:.443)+h*.055,sy=base-sh*367/ch;
  layer.style.left=(center-sw/2)+'px';layer.style.top=sy+'px';layer.style.width=sw+'px';layer.style.height=sh+'px';
  const title=document.getElementById('homeTitle');
- if(title)title.style.top=Math.max(3,Math.min(h*(portrait?.14:.08),sy-title.offsetHeight-10))+'px';
+ if(title)title.style.top=Math.max(3,Math.min(h*(portrait?.17:.11),sy-title.offsetHeight-10))+'px';
  lastLayout=key;return true;
 }
 function frameAt(t){let p=t%duration;for(const [n,d] of seq){if(p<d)return n;p-=d}return 0}

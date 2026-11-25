@@ -36,8 +36,43 @@ function updateHomeLanguage(){
 
 let buttonPointers=new Map(),touchPointers=new Map(),audio=null;
 let goldenSoundscape=null;
-function primeAudio(){if(!state.sound)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();audio.resume?.().catch(()=>{})}catch{}}
-function updateAtmosphere(){try{if(!audio||!window.GoldenSoundscape)return;const active=state.sound&&state.mode==='game'&&state.chapter===0&&!state.paused&&!document.hidden;if(active&&!goldenSoundscape&&audio.state==='running')goldenSoundscape=new window.GoldenSoundscape(audio);goldenSoundscape?.update(active)}catch{}}
+function soundPreference(){try{return localStorage.getItem('travelerSoundEnabled')!=='0'}catch{return true}}
+function syncSoundButtons(){
+ const zh=gameLanguage==='zh',retry=state.sound&&(!audio||audio.state!=='running');
+ const label=zh?(retry?'声音：重试':state.sound?'声音：开启':'声音：关闭'):(retry?'Sound: Retry':state.sound?'Sound: On':'Sound: Off');
+ for(const id of ['soundHome','soundGame']){const el=$(id);if(el){el.textContent=label;el.setAttribute('aria-pressed',String(state.sound&&!retry));el.setAttribute('aria-label',label)}}
+}
+function primeAudio(){
+ if(!state.sound){syncSoundButtons();return}
+ try{
+  if(!audio||audio.state==='closed'){
+   const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw Error('Web Audio unavailable');
+   audio=new AC();goldenSoundscape=null;
+   audio.onstatechange=()=>{syncSoundButtons();updateAtmosphere()};
+  }
+  // Resume synchronously from a real button gesture (including Safari).
+  const pending=audio.resume();
+  pending?.then(()=>{syncSoundButtons();updateAtmosphere()}).catch(()=>syncSoundButtons());
+  if(audio.state==='running')updateAtmosphere();
+ }catch(err){console.warn('Audio could not start',err)}
+ syncSoundButtons();
+}
+function setSound(enabled){
+ state.sound=enabled;
+ try{localStorage.setItem('travelerSoundEnabled',enabled?'1':'0')}catch{}
+ if(enabled)primeAudio();
+ syncSoundButtons();updateAtmosphere();
+}
+function toggleSound(){if(state.sound&&(!audio||audio.state!=='running'))setSound(true);else setSound(!state.sound)}
+function updateAtmosphere(){
+ try{
+  if(!audio||!window.GoldenSoundscape)return;
+  const active=state.sound&&!document.hidden&&!state.paused&&(state.mode==='home'||(state.mode==='game'&&state.chapter===0));
+  const gate=$('entryGate');const permitted=!gate||gate.hidden||gate.classList.contains('gate-depart');
+  if(active&&permitted&&!goldenSoundscape&&audio.state==='running')goldenSoundscape=new window.GoldenSoundscape(audio);
+  goldenSoundscape?.update(active&&permitted&&audio.state==='running');
+ }catch(err){if(!window.__soundError){window.__soundError=String(err);console.warn('Soundscape error',err)}}
+}
 function safeGet(){try{return JSON.parse(localStorage.getItem('travelerShellSave')||'null')}catch{return null}}
 function save(){if(testModule)return;try{localStorage.setItem('travelerShellSave',JSON.stringify({chapter:state.chapter,x:state.x,layout:newGolden&&state.chapter===0?'golden-v2':'legacy',layoutWidths:newGolden&&state.chapter===0?[...newWidths]:null,health:state.health,available:state.available,shell:state.shell,collections:state.collections,broken:state.broken}))}catch{}}
 function tone(freq=660){if(!state.sound)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(freq*1.25,audio.currentTime+.1);g.gain.setValueAtTime(.07,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.22);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.24)}catch{}}
@@ -214,7 +249,7 @@ function newLanding(prevX,prevY,wasGrounded){
  }return result;
 }
 window.addEventListener('keydown',e=>{if(e.code==='KeyG'&&!e.repeat&&state.mode==='game')terrainDebug=!terrainDebug;});
-document.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('selectstart',e=>e.preventDefault());function mode(name){state.mode=name;$('home').classList.toggle('visible',name==='home');$('game').classList.toggle('visible',name==='game');if(name==='game'){resize();requestAnimationFrame(resize)}else clearHeld()}
+document.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('selectstart',e=>e.preventDefault());function mode(name){state.mode=name;if(name==='home')state.paused=false;$('home').classList.toggle('visible',name==='home');$('game').classList.toggle('visible',name==='game');if(name==='game'){resize();requestAnimationFrame(resize)}else clearHeld()}
 function initialCollection(ch){return CHAPTERS[ch].specimens.map((name,i)=>({x:ch*0+210+i*920+([0,90,200,0,60][i]),id:`${ch}-${i}`,name,got:!!state.collections[`${ch}-${i}`]}))}
 function enterChapter(ch,resetPosition=true){state.chapter=ch;resetGoldenAnimation();const C=CHAPTERS[ch];if(resetPosition){state.x=120;state.y=floorAt(ch,state.x)-1;state.ground=false;state.vx=0;state.vy=0;state.health=3;state.broken=false}clearHeld();state.vx=0;state.vy=0;jumps=0;state.checkpoint=110;state.picks=initialCollection(ch);state.paused=false;state.invincible=0;updateHud();mode('game');note(C.descs[0]+' · Explore and discover.',2700);save()}
 async function begin(){primeAudio();await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
@@ -300,15 +335,18 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
   const w=[142,142,142,144,148][item.artIndex],h=w*im.naturalHeight/im.naturalWidth;
   const phase=state.anim*1.85+item.artIndex*1.7;
   const bottom=item.raised?item.y+Math.sin(phase)*8:item.y+22;
-  // A diffuse lavender aura, with no glitter, outline or changes to the painting.
+  // Two thin, stationary elliptical markers on the support surface, no glow.
+  const baseY=item.raised?item.surfaceY:item.y+22;
   cx.save();
-  cx.shadowColor='rgba(217,181,255,.95)';cx.shadowBlur=29;
-  cx.drawImage(im,item.x-w/2,bottom-h,w,h);
-  cx.shadowColor='rgba(217,181,255,.72)';cx.shadowBlur=14;
+  cx.shadowBlur=0;cx.shadowColor='transparent';
+  cx.strokeStyle='rgba(255,246,225,.92)';cx.lineWidth=1.8;
+  cx.beginPath();cx.ellipse(item.x,baseY,w*.47,10,0,0,Math.PI*2);cx.stroke();
+  cx.strokeStyle='rgba(255,246,225,.55)';cx.lineWidth=1.1;
+  cx.beginPath();cx.ellipse(item.x,baseY,w*.34,6,0,0,Math.PI*2);cx.stroke();
   cx.drawImage(im,item.x-w/2,bottom-h,w,h);
   cx.restore();
  }else{
-  cx.font='55px serif';cx.textAlign='center';cx.shadowColor='#D9B5FF';cx.shadowBlur=29;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0;
+  cx.font='55px serif';cx.textAlign='center';cx.shadowColor='transparent';cx.shadowBlur=0;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0;
  }
 }
  const px=state.x,py=state.y,walk=Math.abs(state.vx)>36&&state.ground;const kind=state.shell,frame=walk?(Math.floor(state.anim*7)%2):0;
@@ -324,15 +362,15 @@ function closeDialog(){ $('overlay').classList.remove('visible');$('overlay').se
 function pause(){showDialog('Traveler’s Journal','<p>Pause the journey, consult your shell encyclopedia, or return to the beach.</p>',[{text:'Resume',fn:closeDialog},{text:'Shell Encyclopedia',fn:encyclopedia},{text:'Settings',fn:settings},{text:'Terrain Editor',fn:()=>window.open('terrain.html','_blank')},{text:'Restart Chapter',fn:()=>{closeDialog();enterChapter(state.chapter)}},{text:'Main Menu',fn:()=>{closeDialog();mode('home')}}])}
 function encyclopedia(){let html='<p class="progress">Collect specimens across the four chapters and discover their habitats.</p>';for(let c=0;c<4;c++){html+=`<h3>${CHAPTERS[c].name}</h3>`;CHAPTERS[c].specimens.forEach((s,i)=>{const got=state.collections[`${c}-${i}`];html+=`<div class="entry ${got?'':'locked'}"><span>${got?'🐚':'◇'} ${got?s:'Undiscovered shell'}</span><span>${got?'Collected':'?'}</span></div>`})}showDialog('Shell Encyclopedia',html,[{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
 function about(){const zh=gameLanguage==='zh';showDialog('About', '<p>'+ (zh?"《壳中旅人》是一场水彩世界中的冒险，讲述小寄居蟹螺仔离开海岸边的家，探索未知世界的故事。它穿越金色海岸、珊瑚花园、水晶洞穴与星之海，收集贝壳、发现新的能力，并寻找归家的道路。这是一段关于好奇心、脆弱、适应与归属的宁静旅程；每一次换壳，都是一次成长。":"A Traveler in a Shell is a watercolor adventure following Luo Zai, a little hermit crab who leaves its coastal home to discover an unfamiliar world. Across golden shores, coral gardens, crystal caverns and a sea of stars, the traveler collects shells, discovers new abilities and finds its own way home. A quiet journey about curiosity, vulnerability, adaptation and belonging, where every change of shell is a form of growth.") +'</p><p>Dalian, 2026</p>',[{text:'Back',fn:()=>closeDialog()}])}
-function settings(){showDialog('Settings',`<p>Sound: <strong>${state.sound?'On':'Off'}</strong></p><p>Desktop: ← → or A/D to move, Space to jump, H to hide.<br>Mobile: hold arrows and tap Jump simultaneously.</p><p>Progress is saved automatically in this browser.</p>`,[{text:state.sound?'Mute Sound':'Enable Sound',fn:()=>{state.sound=!state.sound;primeAudio();updateAtmosphere();settings()}},{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
+function settings(){showDialog('Settings',`<p>Sound: <strong>${state.sound?'On':'Off'}</strong></p><p>Desktop: ← → or A/D to move, Space to jump, H to hide.<br>Mobile: hold arrows and tap Jump simultaneously.</p><p>Progress is saved automatically in this browser.</p>`,[{text:state.sound?'Mute Sound':'Enable Sound',fn:()=>{setSound(!state.sound);settings()}},{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
 function showEpilogue(){showDialog('Homecoming',`<img src="${assetURL('epilogue.jpg')}" alt="Homecoming painting" style="max-width:100%;border-radius:12px"><p>The traveler returns with four different homes, and a world of memories.</p>`,[{text:'Return Home',fn:()=>{closeDialog();mode('home')}}])}
-$('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('aboutHome').addEventListener('click',about);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',()=>{state.sound=!state.sound;primeAudio();updateAtmosphere();$('muteMark').textContent=state.sound?'':'×';$('soundHome').setAttribute('aria-pressed',String(!state.sound))});
+$('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('aboutHome').addEventListener('click',about);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',toggleSound);$('soundGame').addEventListener('click',toggleSound);
 
 function setupEntryGate(){
  const gate=$('entryGate');if(!gate)return;
  if(testModule){gate.hidden=true;return}
  const app=$('app'),fullGroup=$('gateFullGroup'),full=$('gateFull'),sound=$('gateSound'),enter=$('gateEnter');
- app.inert=true;state.sound=false;
+ app.inert=true;state.sound=soundPreference();syncSoundButtons();
  const mq=window.matchMedia('(min-width:700px) and (hover:hover) and (pointer:fine)');
  const request=document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen,exit=document.exitFullscreen||document.webkitExitFullscreen;
  function fullActive(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
@@ -344,15 +382,15 @@ function setupEntryGate(){
   fullGroup.hidden=!(mq.matches&&request&&exit);full.setAttribute('aria-pressed',String(fullActive()));$('gateFullPath').setAttribute('d',fullActive()?'M3 8H8V3 M21 8H16V3 M8 21V16H3 M16 21V16H21':'M8 3H3V8 M16 3H21V8 M3 16V21H8 M21 16V21H16');$('gateFullText').textContent=zh?(fullActive()?'开启':'关闭'):(fullActive()?'On':'Off');
  }
  gate.addEventListener('change',()=>{gameLanguage=gate.querySelector('input[name="language"]:checked').value;refresh()});
- sound.addEventListener('click',()=>{state.sound=!state.sound;refresh()});
+ sound.addEventListener('click',()=>{state.sound=!state.sound;try{localStorage.setItem('travelerSoundEnabled',state.sound?'1':'0')}catch{}syncSoundButtons();refresh()});
  full.addEventListener('click',async()=>{try{if(fullActive())await exit.call(document);else await request.call(document.documentElement)}catch{}refresh()});
  document.addEventListener('fullscreenchange',refresh);document.addEventListener('webkitfullscreenchange',refresh);mq.addEventListener?.('change',refresh);
- gate.addEventListener('submit',e=>{e.preventDefault();if(enter.disabled)return;enter.disabled=true;updateHomeLanguage();updateHud();app.inert=false;if(state.sound){try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();audio.resume?.().catch(()=>{})}catch{}}gate.classList.add('gate-depart');setTimeout(()=>{gate.hidden=true;$('begin').focus?.()},650)});
+ gate.addEventListener('submit',e=>{e.preventDefault();if(enter.disabled)return;enter.disabled=true;updateHomeLanguage();updateHud();app.inert=false;gate.classList.add('gate-depart');if(state.sound)primeAudio();else syncSoundButtons();setTimeout(()=>{gate.hidden=true;$('begin').focus?.()},650)});
  refresh();
 }
 
 // Final homepage color, including when opening old theme trial URLs.
-document.querySelector('.home-art').setAttribute('data-home-theme','violet');
+document.querySelector('.home-art').setAttribute('data-home-theme','coral');
 setupEntryGate();
 // Help testing without exposing implementation details in the interface.
 if(testModule)newAssetsReady.then(()=>{if(newReady){enterChapter(0);const m=Math.max(0,Math.min(loadedCount-1,testModule-1));state.x=safeSpawn(m);state.y=floorAt(0,state.x)-1;state.ground=false;terrainDebug=true;note('Terrain test · Module '+String(m+1).padStart(2,'0'),2400)}});

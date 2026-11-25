@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#302846">
 <title>A Traveler in a Shell · Playable Game</title>
-<link rel="stylesheet" href="style.css?v=art16">
+<link rel="stylesheet" href="style.css?v=coral17">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 </head>
 <body>
@@ -17,7 +17,7 @@
 </form>
 <main id="app">
   <section id="home" class="screen visible" aria-label="Game home screen">
-    <div class="home-art clean-home" data-home-theme="violet"><picture><source media="(orientation: portrait)" srcset="assets/home-portrait-empty.jpeg"><img src="assets/home-landscape-empty.jpeg" alt="A watercolor hermit crab on a beach" draggable="false" fetchpriority="high"></picture><canvas id="homeCrabLayer" aria-hidden="true"></canvas><h1 id="homeTitle" class="home-title"><span>A Traveler</span> <span>in a Shell</span></h1><div class="home-buttons" aria-label="Main menu">
+    <div class="home-art clean-home" data-home-theme="coral"><picture><source media="(orientation: portrait)" srcset="assets/home-portrait-empty.jpeg"><img src="assets/home-landscape-empty.jpeg" alt="A watercolor hermit crab on a beach" draggable="false" fetchpriority="high"></picture><canvas id="homeCrabLayer" aria-hidden="true"></canvas><h1 id="homeTitle" class="home-title"><span>A Traveler</span> <span>in a Shell</span></h1><div class="home-buttons" aria-label="Main menu">
       <button id="begin" aria-label="Begin Journey">Begin Journey</button>
       <button id="collection" aria-label="Shell Collection">Shell Collection</button>
       <button id="continue" aria-label="Continue Journey">Continue Journey</button>
@@ -25,7 +25,7 @@
       <button id="aboutHome" aria-label="About">About</button>
     </div>
     <small id="homeCredit" class="home-credit">Dalian, 2026</small>
-    <button id="soundHome" class="home-sound" aria-label="Toggle sound"><span aria-hidden="true" id="muteMark"></span></button></div><noscript><div class="js-warning">This file preview does not run JavaScript. Open the downloaded HTML in a web browser to play.</div></noscript>
+    <button type="button" id="soundHome" class="home-sound" aria-pressed="false">Sound: Off</button></div><noscript><div class="js-warning">This file preview does not run JavaScript. Open the downloaded HTML in a web browser to play.</div></noscript>
   </section>
 
   <section id="game" class="screen" aria-label="Side scrolling platform game">
@@ -36,6 +36,7 @@
         <button id="pauseBtn" class="status-frame" aria-label="Pause and menu">MENU</button>
         <div id="statusLeft" class="status-frame" aria-label="3 of 3 lives"><span id="livesLabel">Lives:</span> <span id="hearts">3</span>/3</div>
         <div id="statusRight" class="status-frame"><span id="shellsLabel">Shells:</span> <span id="collectedCount">0</span>/5</div>
+        <button type="button" id="soundGame" class="status-frame" aria-pressed="false">Sound: Off</button>
       </div>
     </header>
     <div id="controls" aria-label="Game controls">
@@ -55,8 +56,8 @@
   </section>
 </main>
 <script src="terrain-data.js?v=2"></script>
-<script src="home-crab-classic.js?v=2"></script>
-<script src="golden-soundscape.js?v=1"></script>
-<script src="game.js?v=art16"></script>
+<script src="home-crab-classic.js?v=3"></script>
+<script src="golden-soundscape.js?v=2"></script>
+<script src="game.js?v=coral17"></script>
 </body>
 </html>
