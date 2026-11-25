@@ -248,7 +248,12 @@ function progress(dt){if(state.mode!=='game'||state.paused)return;const C=CHAPTE
  if(water&&state.shell==='float'&&!state.ground&&state.y>590){state.y=590;state.vy=0;state.ground=true;jumps=0;state.vx*=.96}
  if(newGolden&&!state.ground&&touchesWater(state.x,prevY,state.y)){hurt('Tide pool · Try the jump again!');return}if(state.y>880){hurt(water?'Deep water · Use the Floating Shell!':'You fell into the tide pool.');return;}
  const nextModule=moduleAt(state.chapter,state.x);if(nextModule!==m)save();
- for(const item of state.picks||[]){if(!item.got&&Math.abs(item.x-state.x)<64&&Math.abs(item.y-state.y)<110){item.got=true;state.collections[item.id]=true;tone(880);note(`Encyclopedia specimen: ${item.name}`,2200);updateHud();save()}}
+ for(const item of state.picks||[]){
+  const near=item.raised
+   ? Math.abs(item.x-state.x)<82&&state.y<=item.surfaceY+18&&state.y>=item.surfaceY-145
+   : Math.abs(item.x-state.x)<64&&Math.abs(item.y-state.y)<110;
+  if(!item.got&&near){item.got=true;state.collections[item.id]=true;tone(880);note(`Encyclopedia specimen: ${item.name}`,2200);updateHud();save()}
+ }
  if(state.x>=chapterWidth(state.chapter)-110){if(newGolden&&state.chapter===0&&(loadedCount<defaults.length||testModule)){state.x=chapterWidth(0)-110;state.vx=0;if(!state.waitingForModule){state.waitingForModule=true;note(testModule?'End of terrain test':'The journey continues soon · Module '+String(loadedCount+1).padStart(2,'0'),3000)}}else finishChapter()}else state.waitingForModule=false;
  state.invincible=Math.max(0,state.invincible-dt);state.anim+=dt;
 }
@@ -256,14 +261,16 @@ function makePickups(){
  const C=CHAPTERS[state.chapter];
  if(newGolden&&state.chapter===0){
   // Source-image coordinates, with positions snapped to existing collision surfaces.
-  const places=[{m:0,x:420},{m:1,x:960},{m:2,x:655},{m:6,x:650},{m:10,x:1050}];
+  const places=[{m:1,x:350,platform:0},{m:3,x:580,platform:1},{m:5,x:810,platform:3},{m:7,x:850,platform:1},{m:9,x:750,platform:0}];
   state.picks=C.specimens.flatMap((name,i)=>{
    const p=places[i];if(p.m>=loadedCount)return [];
    const x=moduleStart(0,p.m)+p.x*moduleWidth(0,p.m)/defaults[p.m].width;
-   const ys=goldenGround.map(l=>lineY(l,x)).filter(y=>y!==null);
-   const tops=goldenPlatforms.map(l=>lineY(l,x)).filter(y=>y!==null);
-   const base=ys.length?Math.min(...ys):tops.length?Math.min(...tops):floorAt(0,x);
-   return [{x,y:base-22,id:'0-'+i,name,got:!!state.collections['0-'+i],artIndex:i}];
+   const target=terrain[p.m].platforms[p.platform];
+   const base=target&&target.length>=2?lineY(nativeLine(p.m,target),x):null;
+   const ground=floorAt(0,x);
+   // Use the raised surface, never the ground underneath it.
+   const surfaceY=base??(ground-130);
+   return [{x,y:surfaceY-12,surfaceY,raised:true,id:'0-'+i,name,got:!!state.collections['0-'+i],artIndex:i}];
   });return;
  }
  state.picks=C.specimens.map((name,i)=>{const x=legacyX(state.chapter,350+i*890+(i%2)*170);return {x,y:floorAt(state.chapter,x)-35-(i===2?75:0),id:state.chapter+'-'+i,name,got:!!state.collections[state.chapter+'-'+i],artIndex:state.chapter===0?i:undefined}}).filter(item=>item.x<chapterWidth(state.chapter)-110);
@@ -284,8 +291,28 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  if(item.got)continue;
  const im=specimenArt[item.artIndex];
  if(imageReady(im)){
-  const w=[65,65,65,72,72][item.artIndex],h=w*im.naturalHeight/im.naturalWidth;
-  cx.drawImage(im,item.x-w/2,item.y+22-h,w,h);
+  const w=[142,142,142,144,148][item.artIndex],h=w*im.naturalHeight/im.naturalWidth;
+  const phase=state.anim*2.15+item.artIndex*1.7;
+  const bottom=item.raised?item.y+Math.sin(phase)*4:item.y+22;
+  // A soft, warm pearlescent rim follows the transparent silhouette.
+  cx.save();
+  cx.shadowColor='rgba(255,245,204,.85)';cx.shadowBlur=10+4*(.5+.5*Math.sin(phase));
+  cx.drawImage(im,item.x-w/2,bottom-h,w,h);
+  cx.restore();
+  // A few small, intermittent hand-painted-looking glints, not a neon ring.
+  cx.save();cx.fillStyle='#fff8df';
+  const glints=[[-.37,.20,0],[.36,.28,1.9],[.15,.07,3.8]];
+  for(const [dx,dy,offset] of glints){
+   const twinkle=Math.pow(Math.max(0,Math.sin(phase+offset)),5);
+   if(twinkle<.04)continue;
+   const gx=item.x+dx*w,gy=bottom-h+dy*h,rr=3+4*twinkle;
+   cx.globalAlpha=.82*twinkle;cx.beginPath();
+   cx.moveTo(gx,gy-rr);cx.quadraticCurveTo(gx+1.1,gy-1.1,gx+rr*.72,gy);
+   cx.quadraticCurveTo(gx+1.1,gy+1.1,gx,gy+rr);
+   cx.quadraticCurveTo(gx-1.1,gy+1.1,gx-rr*.72,gy);
+   cx.quadraticCurveTo(gx-1.1,gy-1.1,gx,gy-rr);cx.fill();
+  }
+  cx.restore();
  }else{
   cx.font='55px serif';cx.textAlign='center';cx.shadowColor='#fff2b9';cx.shadowBlur=18;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0;
  }
