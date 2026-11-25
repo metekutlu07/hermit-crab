@@ -356,3 +356,8 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #overlay.chapter-intro button{border-radius:0;padding:10px 22px}
 @keyframes chapter-fade{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){#overlay.chapter-intro.visible{animation:none}}
+
+/* Bird attack warning: clean, legible countdown, no text shadow. */
+#birdWarning{position:absolute;z-index:8;top:24%;left:50%;transform:translateX(-50%);width:min(235px,72%);padding:10px 14px;color:#fff;background:rgba(48,35,67,.62);border:1px solid rgba(255,255,255,.8);font:500 13px/1.3 var(--graphic-font);letter-spacing:.08em;text-align:center;pointer-events:none;text-shadow:none}
+#birdWarning[hidden]{display:none!important}#birdWarning b{display:block;margin-top:7px;height:2px;background:rgba(255,255,255,.24)}#birdWarning i{display:block;height:2px;background:#fff;transform-origin:left center}
+@media(orientation:landscape){#birdWarning{top:19%}}
