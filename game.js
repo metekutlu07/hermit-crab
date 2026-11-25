@@ -35,6 +35,9 @@ function updateHomeLanguage(){
 }
 
 let buttonPointers=new Map(),touchPointers=new Map(),audio=null;
+let goldenSoundscape=null;
+function primeAudio(){if(!state.sound)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();audio.resume?.().catch(()=>{})}catch{}}
+function updateAtmosphere(){try{if(!audio||!window.GoldenSoundscape)return;const active=state.sound&&state.mode==='game'&&state.chapter===0&&!state.paused&&!document.hidden;if(active&&!goldenSoundscape&&audio.state==='running')goldenSoundscape=new window.GoldenSoundscape(audio);goldenSoundscape?.update(active)}catch{}}
 function safeGet(){try{return JSON.parse(localStorage.getItem('travelerShellSave')||'null')}catch{return null}}
 function save(){if(testModule)return;try{localStorage.setItem('travelerShellSave',JSON.stringify({chapter:state.chapter,x:state.x,layout:newGolden&&state.chapter===0?'golden-v2':'legacy',layoutWidths:newGolden&&state.chapter===0?[...newWidths]:null,health:state.health,available:state.available,shell:state.shell,collections:state.collections,broken:state.broken}))}catch{}}
 function tone(freq=660){if(!state.sound)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(freq*1.25,audio.currentTime+.1);g.gain.setValueAtTime(.07,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.22);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.24)}catch{}}
@@ -214,8 +217,8 @@ window.addEventListener('keydown',e=>{if(e.code==='KeyG'&&!e.repeat&&state.mode=
 document.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('selectstart',e=>e.preventDefault());function mode(name){state.mode=name;$('home').classList.toggle('visible',name==='home');$('game').classList.toggle('visible',name==='game');if(name==='game'){resize();requestAnimationFrame(resize)}else clearHeld()}
 function initialCollection(ch){return CHAPTERS[ch].specimens.map((name,i)=>({x:ch*0+210+i*920+([0,90,200,0,60][i]),id:`${ch}-${i}`,name,got:!!state.collections[`${ch}-${i}`]}))}
 function enterChapter(ch,resetPosition=true){state.chapter=ch;resetGoldenAnimation();const C=CHAPTERS[ch];if(resetPosition){state.x=120;state.y=floorAt(ch,state.x)-1;state.ground=false;state.vx=0;state.vy=0;state.health=3;state.broken=false}clearHeld();state.vx=0;state.vy=0;jumps=0;state.checkpoint=110;state.picks=initialCollection(ch);state.paused=false;state.invincible=0;updateHud();mode('game');note(C.descs[0]+' · Explore and discover.',2700);save()}
-async function begin(){await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
-async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W,MW];let m=0,offset=0;while(m+1<old.length&&x>=offset+old[m]){offset+=old[m];m++}m=Math.min(m,moduleCount(0)-1);x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(old[m]||MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));if(newGolden&&!hasSupport(state.x))state.x=safeSpawn(moduleAt(0,state.x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
+async function begin(){primeAudio();await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
+async function resume(){primeAudio();const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W,MW];let m=0,offset=0;while(m+1<old.length&&x>=offset+old[m]){offset+=old[m];m++}m=Math.min(m,moduleCount(0)-1);x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(old[m]||MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));if(newGolden&&!hasSupport(state.x))state.x=safeSpawn(moduleAt(0,state.x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
 function shellGlyph(kind){const glyphs={golden:'<path d="M12 20C7 20 3 16 3 11a9 9 0 0 1 18 0c0 5-4 9-9 9zM12 15a4 4 0 1 0-4-4c0 3 3 5 6 4"/>',spring:'<path d="M5 19h14L12 3 5 19zM8 12h8m-6-5h4m-7 9h10"/>',heavy:'<path d="M4 15 7 6l7-3 7 7-3 10H8zM7 6l7 7 4 7m-4-7 7-3M4 15l10-2"/>',float:'<ellipse cx="12" cy="12" rx="8" ry="10" transform="rotate(30 12 12)"/><path d="M8 14c-1-3 1-6 4-7"/>'};return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'+glyphs[kind]+'</svg>'}
 function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=tr(C.title);$('chapterName').textContent=tr(C.name);const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('statusLeft').setAttribute('aria-label',state.health+' of 3 lives');$('hearts').textContent=state.health;const slots=$('shellSlots');slots.innerHTML='';slots.hidden=state.available.length<=1;for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;b.setAttribute('aria-pressed',String(state.shell===kind));b.innerHTML=shellGlyph(kind);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
 function equip(kind){if(!state.available.includes(kind))return;state.shell=kind;tone(510);updateHud();save();note(`${SHELLS[kind].name} Shell · ${SHELLS[kind].ability}`,1800)}
@@ -297,29 +300,15 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
   const w=[142,142,142,144,148][item.artIndex],h=w*im.naturalHeight/im.naturalWidth;
   const phase=state.anim*1.85+item.artIndex*1.7;
   const bottom=item.raised?item.y+Math.sin(phase)*8:item.y+22;
-  // A soft, warm pearlescent rim follows the transparent silhouette.
+  // A diffuse lavender aura, with no glitter, outline or changes to the painting.
   cx.save();
-  cx.shadowColor='rgba(255,243,190,.95)';cx.shadowBlur=22+8*(.5+.5*Math.sin(phase));
+  cx.shadowColor='rgba(217,181,255,.95)';cx.shadowBlur=29;
   cx.drawImage(im,item.x-w/2,bottom-h,w,h);
-  cx.shadowColor='rgba(255,252,222,.9)';cx.shadowBlur=9;
+  cx.shadowColor='rgba(217,181,255,.72)';cx.shadowBlur=14;
   cx.drawImage(im,item.x-w/2,bottom-h,w,h);
-  cx.restore();
-  // A few small, intermittent hand-painted-looking glints, not a neon ring.
-  cx.save();cx.fillStyle='#fff8df';
-  const glints=[[-.50,.20,0],[.49,.28,1.4],[.15,-.06,2.8],[-.43,.82,4.2],[.43,.76,5.6]];
-  for(const [dx,dy,offset] of glints){
-   const twinkle=Math.pow(Math.max(0,Math.sin(phase+offset)),2);
-   if(twinkle<.04)continue;
-   const gx=item.x+dx*w,gy=bottom-h+dy*h,rr=4+8*twinkle;
-   cx.globalAlpha=.95*twinkle;cx.shadowColor='#fff0b8';cx.shadowBlur=8*twinkle;cx.beginPath();
-   cx.moveTo(gx,gy-rr);cx.quadraticCurveTo(gx+1.1,gy-1.1,gx+rr*.72,gy);
-   cx.quadraticCurveTo(gx+1.1,gy+1.1,gx,gy+rr);
-   cx.quadraticCurveTo(gx-1.1,gy+1.1,gx-rr*.72,gy);
-   cx.quadraticCurveTo(gx-1.1,gy-1.1,gx,gy-rr);cx.fill();
-  }
   cx.restore();
  }else{
-  cx.font='55px serif';cx.textAlign='center';cx.shadowColor='#fff2b9';cx.shadowBlur=18;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0;
+  cx.font='55px serif';cx.textAlign='center';cx.shadowColor='#D9B5FF';cx.shadowBlur=29;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0;
  }
 }
  const px=state.x,py=state.y,walk=Math.abs(state.vx)>36&&state.ground;const kind=state.shell,frame=walk?(Math.floor(state.anim*7)%2):0;
@@ -328,15 +317,16 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
   if(imageReady(sprite)){cx.save();cx.translate(px,py);if(state.vx< -12)cx.scale(-1,1);cx.drawImage(sprite,-76,-116,152,116);cx.restore()}
  }
  cx.restore();cx.restore()}
-function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
+function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);updateAtmosphere();render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
 function showDialog(title,html,buttons){state.paused=true;clearHeld();$('dialogTitle').textContent=tr(title);$('dialogBody').innerHTML=translatedText(html);const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=tr(b.text);btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
+document.addEventListener('visibilitychange',updateAtmosphere);
 function closeDialog(){ $('overlay').classList.remove('visible');$('overlay').setAttribute('aria-hidden','true');state.paused=false;clearHeld()}
 function pause(){showDialog('Traveler’s Journal','<p>Pause the journey, consult your shell encyclopedia, or return to the beach.</p>',[{text:'Resume',fn:closeDialog},{text:'Shell Encyclopedia',fn:encyclopedia},{text:'Settings',fn:settings},{text:'Terrain Editor',fn:()=>window.open('terrain.html','_blank')},{text:'Restart Chapter',fn:()=>{closeDialog();enterChapter(state.chapter)}},{text:'Main Menu',fn:()=>{closeDialog();mode('home')}}])}
 function encyclopedia(){let html='<p class="progress">Collect specimens across the four chapters and discover their habitats.</p>';for(let c=0;c<4;c++){html+=`<h3>${CHAPTERS[c].name}</h3>`;CHAPTERS[c].specimens.forEach((s,i)=>{const got=state.collections[`${c}-${i}`];html+=`<div class="entry ${got?'':'locked'}"><span>${got?'🐚':'◇'} ${got?s:'Undiscovered shell'}</span><span>${got?'Collected':'?'}</span></div>`})}showDialog('Shell Encyclopedia',html,[{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
 function about(){const zh=gameLanguage==='zh';showDialog('About', '<p>'+ (zh?"《壳中旅人》是一场水彩世界中的冒险，讲述小寄居蟹螺仔离开海岸边的家，探索未知世界的故事。它穿越金色海岸、珊瑚花园、水晶洞穴与星之海，收集贝壳、发现新的能力，并寻找归家的道路。这是一段关于好奇心、脆弱、适应与归属的宁静旅程；每一次换壳，都是一次成长。":"A Traveler in a Shell is a watercolor adventure following Luo Zai, a little hermit crab who leaves its coastal home to discover an unfamiliar world. Across golden shores, coral gardens, crystal caverns and a sea of stars, the traveler collects shells, discovers new abilities and finds its own way home. A quiet journey about curiosity, vulnerability, adaptation and belonging, where every change of shell is a form of growth.") +'</p><p>Dalian, 2026</p>',[{text:'Back',fn:()=>closeDialog()}])}
-function settings(){showDialog('Settings',`<p>Sound: <strong>${state.sound?'On':'Off'}</strong></p><p>Desktop: ← → or A/D to move, Space to jump, H to hide.<br>Mobile: hold arrows and tap Jump simultaneously.</p><p>Progress is saved automatically in this browser.</p>`,[{text:state.sound?'Mute Sound':'Enable Sound',fn:()=>{state.sound=!state.sound;settings()}},{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
+function settings(){showDialog('Settings',`<p>Sound: <strong>${state.sound?'On':'Off'}</strong></p><p>Desktop: ← → or A/D to move, Space to jump, H to hide.<br>Mobile: hold arrows and tap Jump simultaneously.</p><p>Progress is saved automatically in this browser.</p>`,[{text:state.sound?'Mute Sound':'Enable Sound',fn:()=>{state.sound=!state.sound;primeAudio();updateAtmosphere();settings()}},{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
 function showEpilogue(){showDialog('Homecoming',`<img src="${assetURL('epilogue.jpg')}" alt="Homecoming painting" style="max-width:100%;border-radius:12px"><p>The traveler returns with four different homes, and a world of memories.</p>`,[{text:'Return Home',fn:()=>{closeDialog();mode('home')}}])}
-$('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('aboutHome').addEventListener('click',about);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',()=>{state.sound=!state.sound;$('muteMark').textContent=state.sound?'':'×';$('soundHome').setAttribute('aria-pressed',String(!state.sound))});
+$('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('aboutHome').addEventListener('click',about);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',()=>{state.sound=!state.sound;primeAudio();updateAtmosphere();$('muteMark').textContent=state.sound?'':'×';$('soundHome').setAttribute('aria-pressed',String(!state.sound))});
 
 function setupEntryGate(){
  const gate=$('entryGate');if(!gate)return;
@@ -362,7 +352,7 @@ function setupEntryGate(){
 }
 
 // Final homepage color, including when opening old theme trial URLs.
-document.querySelector('.home-art').setAttribute('data-home-theme','teal');
+document.querySelector('.home-art').setAttribute('data-home-theme','violet');
 setupEntryGate();
 // Help testing without exposing implementation details in the interface.
 if(testModule)newAssetsReady.then(()=>{if(newReady){enterChapter(0);const m=Math.max(0,Math.min(loadedCount-1,testModule-1));state.x=safeSpawn(m);state.y=floorAt(0,state.x)-1;state.ground=false;terrainDebug=true;note('Terrain test · Module '+String(m+1).padStart(2,'0'),2400)}});

@@ -308,3 +308,26 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
  #home .home-art.clean-home .home-title{font-size:clamp(20px,6.8vh,50px)}
  #home .home-art.clean-home .home-buttons{top:52%;height:41%;width:23%}
 }
+
+/* Final editorial interface: one violet at home, white in the painted world. */
+#home .home-art.clean-home[data-home-theme="violet"]{--home-ink:#6743A2!important}
+#home .home-art.clean-home .home-title,#home .home-art.clean-home .home-buttons button{color:#6743A2!important;text-shadow:none!important}
+#home .home-art.clean-home .home-buttons button{border-color:#6743A2!important;background:transparent;box-shadow:none!important}
+#home .home-art.clean-home .home-buttons button:focus-visible{outline-color:#6743A2}
+#home .home-credit{left:auto;right:max(12px,env(safe-area-inset-right));text-align:right;color:#6743A2}
+#game{--hud-shadow:none}
+#app,#app *,#entryGate,#entryGate *{text-shadow:none!important}
+#game #chapterName{font-size:clamp(18px,2.8vw,30px);font-weight:400;letter-spacing:-.035em}
+#game #chapterIndex{font-weight:400}
+#game #statusStack > .status-frame{font:400 13px/34px var(--graphic-font)!important}
+@media(max-width:680px) and (orientation:portrait){
+ #game #chapterName{font-size:clamp(16px,4.6vw,22px)}
+ #game #statusStack > .status-frame{font:400 12px/32px var(--graphic-font)!important}
+}
+@media(max-width:345px) and (orientation:portrait){
+ #game #chapterName{font-size:16px}
+}
+@media(max-height:500px) and (orientation:landscape){
+ #game #chapterName{font-size:20px}
+ #game #statusStack > .status-frame{font:400 12px/27px var(--graphic-font)!important}
+}
