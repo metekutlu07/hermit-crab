@@ -118,8 +118,7 @@ function drawGoldenSprite(){
  if(!goldenArtReady())return false;
  const w=152,h=w*GOLDEN_CELL_H/GOLDEN_CELL_W;
  cx.save();cx.translate(state.x,state.y);cx.scale(pose.facing,1);
- const idle=pose.mode==='idle'&&!controls.hide&&window.CrabIdle?.gameFrame(im,goldenAnim.elapsed);
- if(idle)cx.drawImage(idle,-w/2,-h,w,h);else cx.drawImage(im,(pose.frame%2)*GOLDEN_CELL_W,Math.floor(pose.frame/2)*GOLDEN_CELL_H,GOLDEN_CELL_W,GOLDEN_CELL_H,-w/2,-h,w,h);
+ cx.drawImage(im,(pose.frame%2)*GOLDEN_CELL_W,Math.floor(pose.frame/2)*GOLDEN_CELL_H,GOLDEN_CELL_W,GOLDEN_CELL_H,-w/2,-h,w,h);
  cx.restore();return true;
 }
 assets.epilogue=img('epilogue.jpg');

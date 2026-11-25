@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#302846">
 <title>A Traveler in a Shell · Playable Game</title>
-<link rel="stylesheet" href="style.css?v=homegraphic10">
+<link rel="stylesheet" href="style.css?v=classichome11">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 </head>
 <body>
@@ -17,7 +17,7 @@
 </form>
 <main id="app">
   <section id="home" class="screen visible" aria-label="Game home screen">
-    <div class="home-art clean-home" data-home-theme="teal"><picture><source media="(orientation: portrait)" srcset="assets/home-portrait-final.jpeg"><img src="assets/home-landscape-final.jpeg" alt="A watercolor hermit crab on a beach" draggable="false" fetchpriority="high"></picture><canvas id="homeCrabLayer" aria-hidden="true"></canvas><h1 id="homeTitle" class="home-title"><span>A Traveler</span> <span>in a Shell</span></h1><div class="home-buttons" aria-label="Main menu">
+    <div class="home-art clean-home" data-home-theme="teal"><picture><source media="(orientation: portrait)" srcset="assets/home-portrait-empty.jpeg"><img src="assets/home-landscape-empty.jpeg" alt="A watercolor hermit crab on a beach" draggable="false" fetchpriority="high"></picture><canvas id="homeCrabLayer" aria-hidden="true"></canvas><h1 id="homeTitle" class="home-title"><span>A Traveler</span> <span>in a Shell</span></h1><div class="home-buttons" aria-label="Main menu">
       <button id="begin" aria-label="Begin Journey">Begin Journey</button>
       <button id="collection" aria-label="Shell Collection">Shell Collection</button>
       <button id="continue" aria-label="Continue Journey">Continue Journey</button>
@@ -53,8 +53,7 @@
   </section>
 </main>
 <script src="terrain-data.js?v=2"></script>
-<script src="crab-idle.js?v=6"></script>
-<script src="home-crab-frames-v10.js?v=1"></script>
-<script src="game.js?v=homegraphic09"></script>
+<script src="home-crab-classic.js?v=1"></script>
+<script src="game.js?v=classicidle11"></script>
 </body>
 </html>
