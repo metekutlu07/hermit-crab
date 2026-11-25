@@ -283,3 +283,6 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #home #homeCrabLayer.ready{visibility:visible}
 #home .home-art.clean-home .home-title,#home .home-art.clean-home .home-buttons button{color:#245e5d!important;text-shadow:none!important}
 #home .home-art.clean-home .home-buttons button{border-color:#245e5d!important;box-shadow:none!important}
+
+/* Single-line mobile homepage title; keep the agreed blue-green palette. */
+@media(orientation:portrait){#home .home-art.clean-home .home-title{width:94%!important;max-width:94%;white-space:nowrap!important;font-size:clamp(17px,5.25cqw,38px)!important;line-height:1.15}#home .home-art.clean-home .home-title span{display:inline!important;margin:0!important}}

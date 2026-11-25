@@ -44,6 +44,8 @@ for(const kind of Object.keys(SHELLS))for(let i=0;i<2;i++)assets[`crab-${kind}-$
 const GOLDEN_ANIMS={idle:img('crab-golden-idle.png'),walk:img('crab-golden-walk.png'),jump:img('crab-golden-jump.png')};
 const GOLDEN_CELL_W=320,GOLDEN_CELL_H=280;
 const GOLDEN_HIDDEN=img('crab-golden-hidden.png');
+const specimenFiles=['scallop','cowrie','cockle','limpet','moon-snail'].map(n=>'specimen-'+n+'.png');
+const specimenArt=specimenFiles.map(f=>img(f));
 const goldenAnim={mode:'idle',elapsed:0,facing:1,lastTime:0,lastGround:false};
 function imageReady(im){return !!(im&&im.complete&&im.naturalWidth>0&&im.naturalHeight>0)}
 function goldenArtReady(){return Object.values(GOLDEN_ANIMS).every(im=>imageReady(im)&&im.naturalWidth===640&&im.naturalHeight===560)}
@@ -250,7 +252,22 @@ function progress(dt){if(state.mode!=='game'||state.paused)return;const C=CHAPTE
  if(state.x>=chapterWidth(state.chapter)-110){if(newGolden&&state.chapter===0&&(loadedCount<defaults.length||testModule)){state.x=chapterWidth(0)-110;state.vx=0;if(!state.waitingForModule){state.waitingForModule=true;note(testModule?'End of terrain test':'The journey continues soon · Module '+String(loadedCount+1).padStart(2,'0'),3000)}}else finishChapter()}else state.waitingForModule=false;
  state.invincible=Math.max(0,state.invincible-dt);state.anim+=dt;
 }
-function makePickups(){const C=CHAPTERS[state.chapter];state.picks=C.specimens.map((name,i)=>{const x=newGolden?Math.min(chapterWidth(0)-150,moduleStart(0,Math.min(loadedCount-1,[0,2,4,7,10][i]))+Math.min(350,moduleWidth(0,Math.min(loadedCount-1,[0,2,4,7,10][i]))*.3)):legacyX(state.chapter,350+i*890+(i%2)*170);return {x,y:floorAt(state.chapter,x)-35-(i===2?75:0),id:`${state.chapter}-${i}`,name,got:!!state.collections[`${state.chapter}-${i}`]}}).filter(item=>item.x<chapterWidth(state.chapter)-110)}
+function makePickups(){
+ const C=CHAPTERS[state.chapter];
+ if(newGolden&&state.chapter===0){
+  // Source-image coordinates, with positions snapped to existing collision surfaces.
+  const places=[{m:0,x:420},{m:1,x:960},{m:2,x:655},{m:6,x:650},{m:10,x:1050}];
+  state.picks=C.specimens.flatMap((name,i)=>{
+   const p=places[i];if(p.m>=loadedCount)return [];
+   const x=moduleStart(0,p.m)+p.x*moduleWidth(0,p.m)/defaults[p.m].width;
+   const ys=goldenGround.map(l=>lineY(l,x)).filter(y=>y!==null);
+   const tops=goldenPlatforms.map(l=>lineY(l,x)).filter(y=>y!==null);
+   const base=ys.length?Math.min(...ys):tops.length?Math.min(...tops):floorAt(0,x);
+   return [{x,y:base-22,id:'0-'+i,name,got:!!state.collections['0-'+i],artIndex:i}];
+  });return;
+ }
+ state.picks=C.specimens.map((name,i)=>{const x=legacyX(state.chapter,350+i*890+(i%2)*170);return {x,y:floorAt(state.chapter,x)-35-(i===2?75:0),id:state.chapter+'-'+i,name,got:!!state.collections[state.chapter+'-'+i],artIndex:state.chapter===0?i:undefined}}).filter(item=>item.x<chapterWidth(state.chapter)-110);
+}
 const oldEnter=enterChapter;enterChapter=function(ch,reset=true){newGolden=ch===0&&newReady;oldEnter(ch,reset);makePickups()};
 function resize(){const r=canvas.getBoundingClientRect(),dpr=Math.min(3,devicePixelRatio||1);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);cx.setTransform(dpr,0,0,dpr,0,0);state.viewW=Math.max(1,r.width);state.viewH=Math.max(1,r.height);state.zoom=newGolden?1:r.width<650&&r.height>r.width?1.045:1;state.scale=state.viewH/MH*state.zoom;state.originY=(state.viewH-MH*state.scale)/2}
 window.addEventListener('resize',resize);resize();
@@ -263,7 +280,16 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  if(newGolden){stroke(goldenGround,'#72ffac');stroke(goldenPlatforms,'#ffd56a');stroke(goldenWalls,'#ff657b');stroke(goldenHazards,'#63cbff',true)}else stroke(segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]),'#72ffac');cx.restore()}
  // Interactable cracked wall, separate from background.
  if(state.chapter===2&&!state.broken){const x=MW+845,y=CHAPTERS[2].floor;cx.fillStyle='#a28bb5cd';cx.strokeStyle='#e6c8de';cx.lineWidth=5;cx.beginPath();cx.moveTo(x-10,y);cx.lineTo(x-8,y-165);cx.lineTo(x+65,y-167);cx.lineTo(x+63,y);cx.closePath();cx.fill();cx.stroke();cx.strokeStyle='#583e72';cx.lineWidth=3;cx.beginPath();cx.moveTo(x+20,y-165);cx.lineTo(x+44,y-122);cx.lineTo(x+15,y-76);cx.lineTo(x+38,y-29);cx.stroke()}
- for(const item of state.picks||[]){if(item.got)continue;cx.font='55px serif';cx.textAlign='center';cx.shadowColor='#fff2b9';cx.shadowBlur=18;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0}
+ for(const item of state.picks||[]){
+ if(item.got)continue;
+ const im=specimenArt[item.artIndex];
+ if(imageReady(im)){
+  const w=[65,65,65,72,72][item.artIndex],h=w*im.naturalHeight/im.naturalWidth;
+  cx.drawImage(im,item.x-w/2,item.y+22-h,w,h);
+ }else{
+  cx.font='55px serif';cx.textAlign='center';cx.shadowColor='#fff2b9';cx.shadowBlur=18;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0;
+ }
+}
  const px=state.x,py=state.y,walk=Math.abs(state.vx)>36&&state.ground;const kind=state.shell,frame=walk?(Math.floor(state.anim*7)%2):0;
  if(!(controls.hide&&drawHiddenShell(kind))&&(kind!=='golden'||!drawGoldenSprite())){
   const im=assets[`crab-${kind}-${frame}`],base=assets[`crab-${kind}-0`],sprite=imageReady(im)?im:base;
