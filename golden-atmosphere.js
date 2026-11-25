@@ -22,19 +22,14 @@ const water=[
  [rect(753,396,358,32),rect(800,434,225,27),[[475,614],[535,603],[600,604],[640,617],[590,632],[514,628]],[[803,599],[845,588],[900,584],[968,594],[980,607],[905,613],[839,611]]]
 ];
 const heights=[938,938,847,847,847,847,847,847,847,847,705];
-const spores=[
- [[70,350,265,248],[350,280,220,290],[1190,508,220,72]],
- [[435,490,270,90],[1240,522,170,65]],
- [[375,501,210,65],[1270,460,170,80]],
- [[90,475,190,100],[685,489,170,94]],
- [[450,485,215,82],[1250,445,190,80]],
- [[100,420,155,115],[1335,410,160,80]],
- [],
- [[122,550,230,100],[1050,559,230,90]],
- [[240,515,220,90],[660,565,175,68]],
- [[350,365,220,105],[1280,390,195,85]],
- [[175,320,220,135],[1210,369,215,118]]
-];
+// Scene-specific wind: still passages alternate with currents of airborne life.
+const density=[.85,.28,.64,.16,.90,1,0,.55,.38,.92,.70];
+const wind=[1,1,-1,1,1,-1,1,-1,1,1,-1];
+const atlas=new Image();atlas.src='assets/golden-spores-atlas.png?v=1';
+const cell=256;
+const ready=()=>atlas.complete&&atlas.naturalWidth===768&&atlas.naturalHeight===512;
+const seen=new Map();
+function localTime(m,t){if(!seen.has(m)||t<seen.get(m))seen.set(m,t);return Math.max(0,t-seen.get(m))}
 const birdScenes=new Set([0,1,3,5,8,10]);
 const mistScenes=new Set([0,1,3,5,8]);
 const rand=(n)=>{const x=Math.sin(n*127.1+311.7)*43758.5453123;return x-Math.floor(x)};
@@ -64,18 +59,46 @@ function mist(ctx,a,t,m){
  const radius=Math.min(180,(a.r-a.x)*.54),g=ctx.createRadialGradient(0,0,0,0,0,radius);
  g.addColorStop(0,'rgba(238,218,229,.12)');g.addColorStop(.55,'rgba(238,218,229,.045)');g.addColorStop(1,'rgba(238,218,229,0)');ctx.fillStyle=g;ctx.fillRect(-radius,-radius,radius*2,radius*2);ctx.restore();
 }
+function smooth(x){x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)}
 function floatSpores(ctx,m,t){
- for(let j=0;j<spores[m].length;j++){
-  const [x,y,w,h]=spores[m][j];
-  for(let k=0;k<(m===0?9:7);k++){
-   const seed=m*211+j*97+k*13+3,period=5+rand(seed)*5,phase=(t/period+rand(seed+1))%1;
-   const fade=Math.sin(Math.PI*phase)**2;
-   const px=x+rand(seed+2)*w+Math.sin(phase*6.28+seed)*19+phase*19;
-   const py=y+rand(seed+3)*h-phase*44;
-   ctx.globalAlpha=Math.min(.85,fade*(.52+rand(seed+4)*.20)*intensity);
-   ctx.fillStyle=k%3===0?'#E5C9F5':'#FFF0C5';
-   ctx.beginPath();ctx.ellipse(px,py,1.4+rand(seed+5)*1.4,1.3+rand(seed+6)*1.3,0,0,Math.PI*2);ctx.fill();
-  }
+ const d=density[m];if(!d)return;
+ const H=heights[m],dir=wind[m],gust=.32+.68*Math.pow(.5+.5*Math.sin(t*.19+m*1.7),2);
+ // Tiny airborne motes, distributed through the atmosphere, with irregular gaps.
+ for(let k=0;k<Math.round(65*d);k++){
+  const seed=m*809+k*13+3,period=12+rand(seed)*14,phase=(t/period+rand(seed+1))%1;
+  const fade=smooth(phase*6)*smooth((1-phase)*6);
+  const px=((rand(seed+2)*1536+dir*t*(7+rand(seed+3)*9)+Math.sin(t*.36+seed)*16)%1536+1536)%1536;
+  const py=H*(.13+rand(seed+4)*.58)+Math.sin(t*.24+seed)*17-phase*18;
+  ctx.globalAlpha=Math.min(.72,fade*gust*(.35+rand(seed+5)*.32)*intensity);
+  ctx.fillStyle=['#FFF0C5','#F5CFD9','#D8D2F4','#DCEAD2'][k%4];
+  ctx.beginPath();const size=1.0+rand(seed+6)*1.6;ctx.ellipse(px,py,size,size*.82,0,0,Math.PI*2);ctx.fill();
+ }
+ ctx.globalAlpha=1;
+}
+function painted(ctx,m,t,layer,viewLeft,viewRight){
+ if(!ready()||!density[m])return;
+ const H=heights[m],d=density[m],dir=wind[m],clock=localTime(m,t);
+ // Each stream has its own time and trajectory. They are not a single texture moving over the screen.
+ const n=layer===0?Math.round(5*d):layer===1?Math.round(6*d):d>.5?2:0;
+ for(let k=0;k<n;k++){
+  const seed=m*1171+layer*301+k*29+11,period=(layer===2?29:20)+rand(seed)*13;
+  const duration=layer===2?period*.50:period*.69;
+  const shift=k===0&&m===0&&layer===1?duration*.22:rand(seed+1)*period;
+  const time=(clock+shift)%period;if(time>duration)continue;
+  const u=time/duration,fade=smooth(u*7)*smooth((1-u)*5);
+  const anchor=n===1?700:180+k*1200/Math.max(1,n-1);
+  const travel=(layer===0?350:layer===1?470:680)+rand(seed+2)*160;
+  const x=anchor+dir*((u-.25)*travel)+Math.sin(u*6.1+seed)*22;
+  const y=H*(layer===0?.16+rand(seed+3)*.28:layer===1?.23+rand(seed+3)*.43:.30+rand(seed+3)*.44)+Math.sin(u*5+seed)*24-dir*u*28;
+  const size=(layer===0?36+rand(seed+4)*35:layer===1?86+rand(seed+4)*72:155+rand(seed+4)*62)*(1+Math.sin(u*Math.PI)*.08);
+  if(x+size<viewLeft||x-size>viewRight)continue;
+  const edge=smooth(x/70)*smooth((1536-x)/70);
+  const alpha=Math.min(.91,(layer===0?.37:layer===1?.77:.46)*fade*edge*intensity);
+  if(alpha<.01)continue;
+  const art=(m*3+k*5+layer*2)%6;
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.rotate((rand(seed+5)-.5)*.65+Math.sin(u*5+seed)*.18);
+  ctx.drawImage(atlas,art%3*cell,Math.floor(art/3)*cell,cell,cell,-size/2,-size/2,size,size);
+  ctx.restore();
  }
 }
 function distantBirds(ctx,m,t){
@@ -100,9 +123,14 @@ function draw(ctx,im,m,ox,oy,w,h,t,viewW,danger){
  if(mistScenes.has(m)&&j===0)mist(ctx,a,t,m);
  shimmer(ctx,a,t,m===0&&j<2||m===4);
  }
- floatSpores(ctx,m,t);ctx.globalAlpha=1;
+ const left=-ox*1536/w,right=(viewW-ox)*1536/w;
+ floatSpores(ctx,m,t);painted(ctx,m,t,0,left,right);painted(ctx,m,t,1,left,right);ctx.globalAlpha=1;
  if(!danger)distantBirds(ctx,m,t);
  ctx.restore();
 }
-window.GoldenAtmosphere={draw};
+function foreground(ctx,m,ox,oy,w,h,t,viewW){
+ if(mode==='off'||reduced||!areas[m]||!Number.isFinite(t)||!w||!h)return;
+ ctx.save();ctx.translate(ox,oy);ctx.scale(w/1536,h/heights[m]);painted(ctx,m,t,2,-ox*1536/w,(viewW-ox)*1536/w);ctx.restore();
+}
+window.GoldenAtmosphere={draw,foreground};
 })();

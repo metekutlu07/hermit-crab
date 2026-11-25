@@ -386,7 +386,14 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
   const im=assets[`crab-${kind}-${frame}`],base=assets[`crab-${kind}-0`],sprite=imageReady(im)?im:base;
   if(imageReady(sprite)){cx.save();cx.translate(px,py);if(state.vx< -12)cx.scale(-1,1);cx.drawImage(sprite,-76,-116,152,116);cx.restore()}
  }
- cx.restore();cx.restore()}
+ cx.restore();
+ // Rare large forms pass in front of the traveler; HUD is separate from this canvas.
+ if(newGolden&&state.chapter===0&&!terrainDebug)for(let m=0;m<moduleCount(0);m++){
+  const width=moduleWidth(0,m),ox=(moduleStart(0,m)-camera)*S;
+  if(ox>W+2||ox+width*S<0||!newModule[m])continue;
+  window.GoldenAtmosphere?.foreground(cx,m,ox,state.originY,width*S,MH*S,state.anim,W);
+ }
+ cx.restore()}
 function updateBirdWarning(){const el=$('birdWarning'),b=birdEvent;const active=!!b&&!b.resolved&&state.mode==='game'&&!state.paused;el.hidden=!active;if(!active)return;const remaining=Math.max(0,b.warning-b.t);el.querySelector('span').textContent=(gameLanguage==='zh'?'按住躲藏键':'HOLD HIDE')+' · '+remaining.toFixed(1)+'s';el.querySelector('i').style.transform='scaleX('+Math.max(0,Math.min(1,remaining/b.warning))+')';}
 function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);updateBirdWarning();updateAtmosphere();render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
 function showDialog(title,html,buttons){state.paused=true;clearHeld();$('dialogTitle').textContent=tr(title);$('dialogBody').innerHTML=translatedText(html);const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=tr(b.text);btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
