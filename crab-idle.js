@@ -31,42 +31,4 @@ function gameFrame(im,t){
  return p<baseDuration?originalFrames[Math.floor(p*3)%4]:gameLookFrames[lookFrame(p-baseDuration)];
 }
 window.CrabIdle={gameFrame};
-const home=document.getElementById('home'),layer=document.getElementById('homeCrabLayer'),art=home?.querySelector('.home-art');
-if(!home||!layer||!art)return;
-const ctx=layer.getContext('2d'),portraitQuery=window.matchMedia('(orientation: portrait)');
-const specs={
- portrait:{size:[788,1536],rect:[208,349,355,284],shellTop:365},
- landscape:{size:[1536,864],rect:[577,143,328,248],shellTop:153}
-};
-const store={};
-function get(name){
- if(!store[name])store[name]={spec:specs[name],bg:load('home-'+name+'-original-clean.png'),sheet:load('crab-home-'+name+'-original.png'),frames:null};
- return store[name];
-}
-let last=-1,lastEntry=null,lastW=0,lastH=0,lastScale=0,start=null;
-function draw(now){
- if(!home.classList.contains('visible')){start=null;requestAnimationFrame(draw);return}
- const portrait=portraitQuery.matches,entry=get(portrait?'portrait':'landscape'),sp=entry.spec;
- const [x,y,cw,ch]=sp.rect,[bw,bh]=sp.size,w=art.clientWidth,h=art.clientHeight;
- if(!w||!h||!ready(entry.bg,bw,bh)||!ready(entry.sheet,cw*4,ch*3)){
-  layer.classList.remove('ready');last=-1;start=null;requestAnimationFrame(draw);return
- }
- if(!entry.frames)entry.frames=split(entry.sheet,4,3,cw,ch);
- if(start===null||entry!==lastEntry)start=now;
- const frame=lookFrame((now-start)/1000),ratio=Math.min(2,window.devicePixelRatio||1,2400/Math.max(w,h));
- if(frame!==last||entry!==lastEntry||w!==lastW||h!==lastH||ratio!==lastScale){
-  const pw=Math.round(w*ratio),ph=Math.round(h*ratio);
-  if(layer.width!==pw)layer.width=pw;if(layer.height!==ph)layer.height=ph;
-  ctx.setTransform(ratio,0,0,ratio,0,0);
-  const scale=Math.max(w/bw,h/bh),iw=bw*scale,ih=bh*scale,ox=(w-iw)/2,oy=(h-ih)/2;
-  ctx.clearRect(0,0,w,h);
-  ctx.drawImage(entry.bg,ox,oy,iw,ih);
-  ctx.drawImage(entry.frames[frame],ox+x*scale,oy+y*scale,cw*scale,ch*scale);
-  const title=document.getElementById('homeTitle');
-  if(title)title.style.top=Math.max(3,Math.min(h*(portrait?.09:.045),oy+sp.shellTop*scale-title.offsetHeight-12))+'px';
-  layer.classList.add('ready');last=frame;lastEntry=entry;lastW=w;lastH=h;lastScale=ratio;
- }
- requestAnimationFrame(draw);
-}
-requestAnimationFrame(draw);
 })();
