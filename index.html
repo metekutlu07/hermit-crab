@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#302846">
 <title>A Traveler in a Shell · Playable Game</title>
-<link rel="stylesheet" href="style.css?v=graphic02">
+<link rel="stylesheet" href="style.css?v=graphic03">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 </head>
 <body>
@@ -23,11 +23,11 @@
   <section id="game" class="screen" aria-label="Side scrolling platform game">
     <canvas id="stage" aria-label="Watercolor side-scrolling world"></canvas>
     <header class="game-hud" aria-label="Chapter and status">
-      <div id="chapterTitle" class="hud-top-item"><small id="chapterIndex">CHAPTER I</small><span id="chapterName">Golden Shores</span></div>
-      <div class="status-strip" aria-label="Game status">
-        <button id="pauseBtn" class="status-frame" aria-label="Pause and menu"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><path d="M5 8h14M5 16h14"/></svg></button>
-        <div id="statusLeft" class="status-frame" aria-label="3 of 3 lives"><span id="hearts" aria-hidden="true"><i class="life-dot full"></i><i class="life-dot full"></i><i class="life-dot full"></i></span></div>
-        <div id="statusRight" class="status-frame"><span class="collection-count">Shells : <span id="collectedCount">0</span>/5</span></div>
+      <div id="chapterTitle" class="hud-top-item"><span id="chapterName">Golden Shores</span><small id="chapterIndex">CHAPTER I</small></div>
+      <div class="status-strip" id="statusStack" aria-label="Game status">
+        <button id="pauseBtn" class="status-frame" aria-label="Pause and menu">MENU</button>
+        <div id="statusLeft" class="status-frame" aria-label="3 of 3 lives">Lives: <span id="hearts">3</span>/3</div>
+        <div id="statusRight" class="status-frame">Shells: <span id="collectedCount">0</span>/5</div>
       </div>
     </header>
     <div id="controls" aria-label="Game controls">
@@ -47,6 +47,6 @@
   </section>
 </main>
 <script src="terrain-data.js?v=2"></script>
-<script src="game.js?v=graphic02"></script>
+<script src="game.js?v=graphic03"></script>
 </body>
 </html>

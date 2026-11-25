@@ -22,6 +22,7 @@ for(const kind of Object.keys(SHELLS))for(let i=0;i<2;i++)assets[`crab-${kind}-$
 // Golden Shell watercolor animation. Keep the legacy sprite until all three sheets are loaded.
 const GOLDEN_ANIMS={idle:img('crab-golden-idle.png'),walk:img('crab-golden-walk.png'),jump:img('crab-golden-jump.png')};
 const GOLDEN_CELL_W=320,GOLDEN_CELL_H=280;
+const GOLDEN_HIDDEN=img('crab-golden-hidden.png');
 const goldenAnim={mode:'idle',elapsed:0,facing:1,lastTime:0,lastGround:false};
 function imageReady(im){return !!(im&&im.complete&&im.naturalWidth>0&&im.naturalHeight>0)}
 function goldenArtReady(){return Object.values(GOLDEN_ANIMS).every(im=>imageReady(im)&&im.naturalWidth===640&&im.naturalHeight===560)}
@@ -82,6 +83,10 @@ function getShellOnly(kind,painted){
  shellCache.set(key,result);return result;
 }
 function drawHiddenShell(kind){
+ if(kind==='golden'&&imageReady(GOLDEN_HIDDEN)){
+  const w=130,h=w*GOLDEN_HIDDEN.naturalHeight/GOLDEN_HIDDEN.naturalWidth;
+  cx.save();cx.translate(state.x,state.y);cx.scale(goldenAnim.facing,1);cx.drawImage(GOLDEN_HIDDEN,-w/2,-h,w,h);cx.restore();return true;
+ }
  const painted=kind==='golden'&&goldenArtReady(),shell=getShellOnly(kind,painted);if(!shell)return false;
  const scale=152/shell.w, facing=kind==='golden'?goldenAnim.facing:(state.vx< -12?-1:1);
  cx.save();cx.translate(state.x,state.y);cx.scale(facing,1);cx.drawImage(shell.layer,-76,-shell.foot*scale,152,shell.h*scale);cx.restore();return true;
@@ -187,7 +192,7 @@ function enterChapter(ch,resetPosition=true){state.chapter=ch;resetGoldenAnimati
 async function begin(){await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
 async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W,MW];let m=0,offset=0;while(m+1<old.length&&x>=offset+old[m]){offset+=old[m];m++}m=Math.min(m,moduleCount(0)-1);x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(old[m]||MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));if(newGolden&&!hasSupport(state.x))state.x=safeSpawn(moduleAt(0,state.x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
 function shellGlyph(kind){const glyphs={golden:'<path d="M12 20C7 20 3 16 3 11a9 9 0 0 1 18 0c0 5-4 9-9 9zM12 15a4 4 0 1 0-4-4c0 3 3 5 6 4"/>',spring:'<path d="M5 19h14L12 3 5 19zM8 12h8m-6-5h4m-7 9h10"/>',heavy:'<path d="M4 15 7 6l7-3 7 7-3 10H8zM7 6l7 7 4 7m-4-7 7-3M4 15l10-2"/>',float:'<ellipse cx="12" cy="12" rx="8" ry="10" transform="rotate(30 12 12)"/><path d="M8 14c-1-3 1-6 4-7"/>'};return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'+glyphs[kind]+'</svg>'}
-function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=C.title;$('chapterName').textContent=C.name;const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('statusLeft').setAttribute('aria-label',state.health+' of 3 lives');$('hearts').innerHTML=Array.from({length:3},(_,i)=>'<i class="life-dot'+(i<state.health?' full':'')+'"></i>').join('');const slots=$('shellSlots');slots.innerHTML='';slots.hidden=state.available.length<=1;for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;b.setAttribute('aria-pressed',String(state.shell===kind));b.innerHTML=shellGlyph(kind);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
+function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=C.title;$('chapterName').textContent=C.name;const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('statusLeft').setAttribute('aria-label',state.health+' of 3 lives');$('hearts').textContent=state.health;const slots=$('shellSlots');slots.innerHTML='';slots.hidden=state.available.length<=1;for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;b.setAttribute('aria-pressed',String(state.shell===kind));b.innerHTML=shellGlyph(kind);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
 function equip(kind){if(!state.available.includes(kind))return;state.shell=kind;tone(510);updateHud();save();note(`${SHELLS[kind].name} Shell · ${SHELLS[kind].ability}`,1800)}
 function note(txt,ms=2300){const el=$('message');el.textContent=txt;el.classList.add('show');clearTimeout(state.messages);state.messages=setTimeout(()=>el.classList.remove('show'),ms)}
 function unlock(kind){if(state.available.includes(kind))return;state.available.push(kind);equip(kind);tone(830);note(`Discovered ${SHELLS[kind].name} Shell! ${SHELLS[kind].ability}`,4000);save()}
