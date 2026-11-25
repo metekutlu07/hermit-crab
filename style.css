@@ -168,7 +168,7 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
    The legacy illustrated menu remains available if a new painting is not uploaded. */
 #home .home-clean-image,#home .home-title{display:none}
 #home .home-art.clean-home{container-type:size;width:min(100cqw,177.7778cqh);aspect-ratio:16/9;max-width:100%;--home-ink:#503448}
-#home .home-art.clean-home picture{visibility:hidden}
+#home .home-art.clean-home picture{visibility:visible}
 #home .home-art.clean-home .home-clean-image{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none}
 #home .home-art.clean-home .home-title{display:block;position:absolute;z-index:2;top:5.5%;left:50%;width:55%;transform:translateX(-50%);margin:0;text-align:center;color:var(--home-ink);font:500 clamp(20px,3.5cqw,68px)/1.04 var(--graphic-font);letter-spacing:-.052em;white-space:nowrap;pointer-events:none}
 #home .home-art.clean-home .home-buttons{position:absolute;z-index:2;inset:auto;left:50%;top:46%;width:24%;height:29%;transform:translateX(-50%);display:grid;grid-template-rows:repeat(4,minmax(0,1fr));gap:clamp(3px,.65cqh,9px);pointer-events:none}
