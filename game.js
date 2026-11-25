@@ -292,7 +292,7 @@ function setupEntryGate(){
   $('gateLanguageLabel').textContent=zh?'选择语言':'Language';$('gateSoundLabel').textContent=zh?'声音':'Sound';$('gateFullLabel').textContent=zh?'全屏':'Full screen';enter.textContent=zh?'进入':'Enter';
   $('gateSoundText').textContent=zh?(state.sound?'开启':'关闭'):(state.sound?'On':'Off');
   sound.setAttribute('aria-pressed',String(state.sound));$('gateSoundPath').setAttribute('d',state.sound?'M3 9h4l5-4v14l-5-4H3zM15 8q5 4 0 8m3-11q8 7 0 14':'M3 9h4l5-4v14l-5-4H3zM16 9l6 6m0-6-6 6');
-  fullGroup.hidden=!(mq.matches&&request&&exit);full.setAttribute('aria-pressed',String(fullActive()));$('gateFullText').textContent=zh?(fullActive()?'开启':'关闭'):(fullActive()?'On':'Off');
+  fullGroup.hidden=!(mq.matches&&request&&exit);full.setAttribute('aria-pressed',String(fullActive()));$('gateFullPath').setAttribute('d',fullActive()?'M3 8H8V3 M21 8H16V3 M8 21V16H3 M16 21V16H21':'M8 3H3V8 M16 3H21V8 M3 16V21H8 M21 16V21H16');$('gateFullText').textContent=zh?(fullActive()?'开启':'关闭'):(fullActive()?'On':'Off');
  }
  gate.addEventListener('change',()=>{gameLanguage=gate.querySelector('input[name="language"]:checked').value;refresh()});
  sound.addEventListener('click',()=>{state.sound=!state.sound;refresh()});
@@ -302,6 +302,10 @@ function setupEntryGate(){
  refresh();
 }
 
+// Select a homepage color using ?theme=white, lavender or teal. Default: lavender.
+const requestedHomeTheme=new URLSearchParams(location.search).get('theme');
+const homeTheme=['white','lavender','teal'].includes(requestedHomeTheme)?requestedHomeTheme:'lavender';
+document.querySelector('.home-art').setAttribute('data-home-theme',homeTheme);
 setupEntryGate();
 // Help testing without exposing implementation details in the interface.
 if(testModule)newAssetsReady.then(()=>{if(newReady){enterChapter(0);const m=Math.max(0,Math.min(loadedCount-1,testModule-1));state.x=safeSpawn(m);state.y=floorAt(0,state.x)-1;state.ground=false;terrainDebug=true;note('Terrain test · Module '+String(m+1).padStart(2,'0'),2400)}});

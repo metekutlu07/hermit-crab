@@ -234,3 +234,15 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 .language-gate button:focus-visible,.language-gate input:focus-visible+span{outline:1px solid white;outline-offset:4px}
 .language-gate.gate-depart{pointer-events:none;opacity:0;transition:opacity .65s ease}
 @media(prefers-reduced-motion:reduce){.language-gate.gate-depart{transition:none}}
+
+/* Monochromatic homepage trials. The game HUD and entry gate stay white. */
+#home .home-art.clean-home[data-home-theme="white"]{--home-ink:#fff}
+#home .home-art.clean-home[data-home-theme="lavender"]{--home-ink:#735283}
+#home .home-art.clean-home[data-home-theme="teal"]{--home-ink:#245e5d}
+#home .home-art.clean-home .home-title{color:var(--home-ink)}
+#home .home-art.clean-home .home-buttons button{color:var(--home-ink);border-color:var(--home-ink);background:transparent}
+#home .home-art.clean-home .home-buttons button:hover{background:rgba(255,255,255,.13)}
+#home .home-art.clean-home .home-buttons button:active{color:var(--home-ink);background:rgba(255,255,255,.22)}
+#home .home-art.clean-home[data-home-theme="white"] .home-title,
+#home .home-art.clean-home[data-home-theme="white"] .home-buttons button{text-shadow:0 1px 4px #61483d99}
+#home .home-art.clean-home[data-home-theme="white"] .home-buttons button{box-shadow:0 0 0 1px #61483d26}
