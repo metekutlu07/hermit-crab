@@ -13,6 +13,7 @@ const SHELLS={golden:{name:'Golden',icon:'🐚',ability:'Protection and hiding'}
 const assets={}, canvas=$('stage'),cx=canvas.getContext('2d',{alpha:false}),controls={left:false,right:false,hide:false};
 const state={mode:'home',chapter:0,x:135,y:0,vx:0,vy:0,ground:false,available:['golden'],shell:'golden',health:3,collections:{},broken:false,paused:false,hidden:false,last:0,anim:0,invincible:0,checkpoint:100,cam:0,messages:0,scale:1,originY:0,viewW:800,viewH:600,zoom:1,sound:true,pickups:[]};
 const ZH={
+ 'About':'关于',
  'A Traveler':'小小旅人','in a Shell':'壳中的旅程','Begin Journey':'开始旅程','Shell Collection':'贝壳收藏','Continue Journey':'继续旅程','Settings':'设置',
  'Golden Shores':'金色海岸','Coral Gardens':'珊瑚花园','Crystal Caverns':'水晶洞穴','Sea of Stars':'星之海',
  'CHAPTER I':'第一章','CHAPTER II':'第二章','CHAPTER III':'第三章','CHAPTER IV':'第四章',
@@ -29,7 +30,7 @@ function translatedText(v){if(gameLanguage!=='zh')return v;if(ZH[v])return ZH[v]
 function updateHomeLanguage(){
  document.documentElement.lang=gameLanguage==='zh'?'zh-CN':'en';
  const title=$('homeTitle');if(title){const a=title.querySelectorAll('span');a[0].textContent=tr('A Traveler');a[1].textContent=tr('in a Shell')}
- for(const [id,label] of [['begin','Begin Journey'],['collection','Shell Collection'],['continue','Continue Journey'],['settingsHome','Settings'],['pauseBtn','MENU'],['livesLabel','Lives:'],['shellsLabel','Shells:']]){const el=$(id);if(el)el.textContent=tr(label)}
+ for(const [id,label] of [['begin','Begin Journey'],['collection','Shell Collection'],['continue','Continue Journey'],['settingsHome','Settings'],['aboutHome','About'],['pauseBtn','MENU'],['livesLabel','Lives:'],['shellsLabel','Shells:']]){const el=$(id);if(el)el.textContent=tr(label)}
  for(const [id,label] of [['hide','HIDE'],['jump','JUMP']]){const el=$(id);if(el)el.querySelector('span').textContent=tr(label)}
 }
 
@@ -328,9 +329,10 @@ function showDialog(title,html,buttons){state.paused=true;clearHeld();$('dialogT
 function closeDialog(){ $('overlay').classList.remove('visible');$('overlay').setAttribute('aria-hidden','true');state.paused=false;clearHeld()}
 function pause(){showDialog('Traveler’s Journal','<p>Pause the journey, consult your shell encyclopedia, or return to the beach.</p>',[{text:'Resume',fn:closeDialog},{text:'Shell Encyclopedia',fn:encyclopedia},{text:'Settings',fn:settings},{text:'Terrain Editor',fn:()=>window.open('terrain.html','_blank')},{text:'Restart Chapter',fn:()=>{closeDialog();enterChapter(state.chapter)}},{text:'Main Menu',fn:()=>{closeDialog();mode('home')}}])}
 function encyclopedia(){let html='<p class="progress">Collect specimens across the four chapters and discover their habitats.</p>';for(let c=0;c<4;c++){html+=`<h3>${CHAPTERS[c].name}</h3>`;CHAPTERS[c].specimens.forEach((s,i)=>{const got=state.collections[`${c}-${i}`];html+=`<div class="entry ${got?'':'locked'}"><span>${got?'🐚':'◇'} ${got?s:'Undiscovered shell'}</span><span>${got?'Collected':'?'}</span></div>`})}showDialog('Shell Encyclopedia',html,[{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
+function about(){const zh=gameLanguage==='zh';showDialog('About', '<p>'+ (zh?"《壳中旅人》是一场水彩世界中的冒险，讲述小寄居蟹螺仔离开海岸边的家，探索未知世界的故事。它穿越金色海岸、珊瑚花园、水晶洞穴与星之海，收集贝壳、发现新的能力，并寻找归家的道路。这是一段关于好奇心、脆弱、适应与归属的宁静旅程；每一次换壳，都是一次成长。":"A Traveler in a Shell is a watercolor adventure following Luo Zai, a little hermit crab who leaves its coastal home to discover an unfamiliar world. Across golden shores, coral gardens, crystal caverns and a sea of stars, the traveler collects shells, discovers new abilities and finds its own way home. A quiet journey about curiosity, vulnerability, adaptation and belonging, where every change of shell is a form of growth.") +'</p><p>Dalian, 2026</p>',[{text:'Back',fn:()=>closeDialog()}])}
 function settings(){showDialog('Settings',`<p>Sound: <strong>${state.sound?'On':'Off'}</strong></p><p>Desktop: ← → or A/D to move, Space to jump, H to hide.<br>Mobile: hold arrows and tap Jump simultaneously.</p><p>Progress is saved automatically in this browser.</p>`,[{text:state.sound?'Mute Sound':'Enable Sound',fn:()=>{state.sound=!state.sound;settings()}},{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
 function showEpilogue(){showDialog('Homecoming',`<img src="${assetURL('epilogue.jpg')}" alt="Homecoming painting" style="max-width:100%;border-radius:12px"><p>The traveler returns with four different homes, and a world of memories.</p>`,[{text:'Return Home',fn:()=>{closeDialog();mode('home')}}])}
-$('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',()=>{state.sound=!state.sound;$('muteMark').textContent=state.sound?'':'×';$('soundHome').setAttribute('aria-pressed',String(!state.sound))});
+$('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('aboutHome').addEventListener('click',about);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',()=>{state.sound=!state.sound;$('muteMark').textContent=state.sound?'':'×';$('soundHome').setAttribute('aria-pressed',String(!state.sound))});
 
 function setupEntryGate(){
  const gate=$('entryGate');if(!gate)return;
