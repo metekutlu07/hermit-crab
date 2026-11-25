@@ -259,3 +259,10 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 /* Sprite-based home art, displayed only after all required assets have loaded. */
 #home #homeCrabLayer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;visibility:hidden}
 #home #homeCrabLayer.ready{visibility:visible}
+
+/* Final color and original artwork. Applies even to old theme-trial URLs. */
+#home .home-art.clean-home{--home-ink:#245e5d!important}
+#home .home-art.clean-home .home-title{color:#245e5d!important;text-shadow:none!important}
+#home .home-art.clean-home .home-buttons button{color:#245e5d!important;border-color:#245e5d!important;text-shadow:none!important;box-shadow:none!important;background:transparent}
+#home .home-art.clean-home .home-buttons button:active{background:rgba(36,94,93,.10)}
+#home #homeCrabLayer{inset:auto;width:0;height:0;pointer-events:none}

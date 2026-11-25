@@ -23,40 +23,90 @@ function gameFrame(im,t){
  return gameFrames[timeline(t,gameSequence)];
 }
 window.CrabIdle={gameFrame};
-const home=document.getElementById('home'),layer=document.getElementById('homeCrabLayer'),art=home?.querySelector('.home-art');
-if(!home||!layer||!art)return;
-const bgPortrait=load('home-portrait-empty.jpeg'),bgLandscape=load('home-landscape-empty.jpeg'),homeSheet=load('crab-home-look.png');
-const ctx=layer.getContext('2d'),portraitQuery=window.matchMedia('(orientation: portrait)');
-let frames=null,last=-1,lastBg=null,lastW=0,lastH=0,lastScale=0,start=null;
-function draw(now){
- if(!home.classList.contains('visible')){start=null;requestAnimationFrame(draw);return}
- const portrait=portraitQuery.matches,bg=portrait?bgPortrait:bgLandscape;
- const w=art.clientWidth,h=art.clientHeight;
- if(!w||!h||!ready(bg)||!ready(homeSheet,1600,760)){
-  layer.classList.remove('ready');last=-1;start=null;requestAnimationFrame(draw);return
- }
- if(!frames)frames=split(homeSheet,4,2,400,380);
- if(start===null)start=now;
- const frame=timeline((now-start)/1000,homeSequence);
- const ratio=Math.min(2,window.devicePixelRatio||1,2400/Math.max(w,h));
- if(frame!==last||bg!==lastBg||w!==lastW||h!==lastH||ratio!==lastScale){
-  const bw=Math.round(w*ratio),bh=Math.round(h*ratio);
-  if(layer.width!==bw)layer.width=bw;if(layer.height!==bh)layer.height=bh;
-  ctx.setTransform(ratio,0,0,ratio,0,0);
-  const sc=Math.max(w/bg.naturalWidth,h/bg.naturalHeight),iw=bg.naturalWidth*sc,ih=bg.naturalHeight*sc,ox=(w-iw)/2,oy=(h-ih)/2;
-  ctx.clearRect(0,0,w,h);ctx.drawImage(bg,ox,oy,iw,ih);
-  // Anchor the new sprite to the center and baseline of the original painted crab.
-  const sw=iw*(portrait?.45:.202),sh=sw*380/400,center=ox+iw*(portrait?.49:.483),base=oy+ih*(portrait?.405:.443);
-  const sy=base-sh*367/380;
-  ctx.drawImage(frames[frame],center-sw/2,sy,sw,sh);
-  const title=document.getElementById('homeTitle');
-  if(title){
-   const desired=h*(portrait?.09:.045);
-   title.style.top=Math.max(3,Math.min(desired,sy-title.offsetHeight-10))+'px';
+// Homepage uses the two original artworks, not the regenerated purple crab.
+// Extract a crab-sized patch of the original painting, including its sandy shadow.
+// Build aligned eye-motion frames from original pixels, without redrawing the shell.
+const home=document.getElementById('home'),layer=document.getElementById('homeCrabLayer'),art=home?.querySelector('.home-art'),photo=art?.querySelector('picture img');
+if(!home||!layer||!art||!photo)return;
+const ctx=layer.getContext('2d');
+const specs={
+ portrait:{size:[788,1536],rect:[208,349,355,284],eyes:[[435,463,26,34],[494,462,26,34]],amp:10,shellTop:365},
+ landscape:{size:[1536,864],rect:[577,143,328,248],eyes:[[780,246,24,30],[836,244,24,30]],amp:9,shellTop:153}
+};
+let frames=null,rect=null,activeSrc='',last=-1,started=null,meta=null;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function build(photo,rect,eyes,amp){
+ const [x,y,w,h]=rect,base=canvas(w,h),c=base.getContext('2d',{willReadFrequently:true});
+ c.drawImage(photo,x,y,w,h,0,0,w,h);const original=c.getImageData(0,0,w,h);
+ const out=[];
+ for(let step=-6;step<=6;step++){
+  if(step===0){out.push(base);continue}
+  const dest=canvas(w,h),dc=dest.getContext('2d'),p=dc.createImageData(w,h);p.data.set(original.data);
+  const amount=step/6;
+  for(const [ax,ay,rx,ry] of eyes){
+   const ex=ax-x,ey=ay-y;
+   for(let j=Math.max(0,Math.floor(ey-ry));j<Math.min(h,Math.ceil(ey+ry));j++){
+    for(let i=Math.max(0,Math.floor(ex-rx));i<Math.min(w,Math.ceil(ex+rx));i++){
+     const r=((i-ex)/rx)**2+((j-ey)/ry)**2;if(r>=1)continue;
+     const k=(1-r)*(1-r)*(1+2*r);
+     const sx=clamp(i-amount*amp*k,0,w-1),sy=clamp(j+(Math.abs(amount)*1.4)*k,0,h-1);
+     const ix=Math.floor(sx),iy=Math.floor(sy),fx=sx-ix,fy=sy-iy;
+     const a=(iy*w+ix)*4,b=(iy*w+Math.min(w-1,ix+1))*4,d=(Math.min(h-1,iy+1)*w+ix)*4,e=(Math.min(h-1,iy+1)*w+Math.min(w-1,ix+1))*4,at=(j*w+i)*4;
+     for(let channel=0;channel<4;channel++)p.data[at+channel]=Math.round((original.data[a+channel]*(1-fx)+original.data[b+channel]*fx)*(1-fy)+(original.data[d+channel]*(1-fx)+original.data[e+channel]*fx)*fy);
+    }
+   }
   }
-  layer.classList.add('ready');last=frame;lastBg=bg;lastW=w;lastH=h;lastScale=ratio;
+  dc.putImageData(p,0,0);out.push(dest);
  }
- requestAnimationFrame(draw);
+ return out;
 }
-requestAnimationFrame(draw);
+function layout(){
+ if(!rect||!meta)return;
+ const w=art.clientWidth,h=art.clientHeight;if(!w||!h)return;
+ const scale=Math.max(w/photo.naturalWidth,h/photo.naturalHeight),ox=(w-photo.naturalWidth*scale)/2,oy=(h-photo.naturalHeight*scale)/2;
+ layer.style.left=(ox+rect[0]*scale)+'px';layer.style.top=(oy+rect[1]*scale)+'px';layer.style.width=rect[2]*scale+'px';layer.style.height=rect[3]*scale+'px';
+ const title=document.getElementById('homeTitle');
+ if(title){const portrait=meta===specs.portrait;const top=oy+meta.shellTop*photo.naturalHeight/meta.size[1]*scale;title.style.top=Math.max(3,Math.min(h*(portrait?.09:.045),top-title.offsetHeight-12))+'px'}
+}
+function prepare(){
+ if(!photo.complete||!photo.naturalWidth)return;
+ const source=photo.currentSrc||photo.src;if(source===activeSrc&&frames)return;
+ layer.classList.remove('ready');activeSrc=source;
+ meta=photo.naturalHeight>photo.naturalWidth?specs.portrait:specs.landscape;
+ const sx=photo.naturalWidth/meta.size[0],sy=photo.naturalHeight/meta.size[1];
+ rect=meta.rect.map((v,i)=>Math.round(v*(i%2?sy:sx)));
+ const eyes=meta.eyes.map(e=>[e[0]*sx,e[1]*sy,e[2]*sx,e[3]*sy]);
+ try{
+  frames=build(photo,rect,eyes,meta.amp*sx);layer.width=rect[2];layer.height=rect[3];
+  ctx.drawImage(frames[6],0,0);last=6;started=null;layout();
+  layer.classList.add('ready');
+ }catch(err){frames=null;layer.classList.remove('ready')}
+}
+const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+function gaze(t){
+ const p=t%8.4;
+ if(p<1.7)return 0;
+ if(p<2.2)return -smooth((p-1.7)/.5);
+ if(p<3.05)return -1;
+ if(p<3.55)return -(1-smooth((p-3.05)/.5));
+ if(p<4.85)return 0;
+ if(p<5.35)return smooth((p-4.85)/.5);
+ if(p<6.1)return 1;
+ if(p<6.6)return 1-smooth((p-6.1)/.5);
+ return 0;
+}
+photo.addEventListener('load',()=>{activeSrc='';prepare()});
+window.addEventListener('resize',()=>{prepare();layout()});
+if(typeof ResizeObserver!=='undefined')new ResizeObserver(layout).observe(art);
+let checkAt=0;
+function animate(now){
+ if(now-checkAt>350){checkAt=now;prepare();layout()}
+ if(frames&&home.classList.contains('visible')){
+  if(started===null)started=now;
+  const n=reduced.matches?6:Math.round(gaze((now-started)/1000)*6)+6;
+  if(n!==last){ctx.clearRect(0,0,layer.width,layer.height);ctx.drawImage(frames[n],0,0);last=n}
+ }else started=null;
+ requestAnimationFrame(animate);
+}
+prepare();requestAnimationFrame(animate);
 })();

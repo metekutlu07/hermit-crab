@@ -303,10 +303,8 @@ function setupEntryGate(){
  refresh();
 }
 
-// Select a homepage color using ?theme=white, lavender or teal. Default: lavender.
-const requestedHomeTheme=new URLSearchParams(location.search).get('theme');
-const homeTheme=['white','lavender','teal'].includes(requestedHomeTheme)?requestedHomeTheme:'teal';
-document.querySelector('.home-art').setAttribute('data-home-theme',homeTheme);
+// Final homepage color, including when opening old theme trial URLs.
+document.querySelector('.home-art').setAttribute('data-home-theme','teal');
 setupEntryGate();
 // Help testing without exposing implementation details in the interface.
 if(testModule)newAssetsReady.then(()=>{if(newReady){enterChapter(0);const m=Math.max(0,Math.min(loadedCount-1,testModule-1));state.x=safeSpawn(m);state.y=floorAt(0,state.x)-1;state.ground=false;terrainDebug=true;note('Terrain test · Module '+String(m+1).padStart(2,'0'),2400)}});
