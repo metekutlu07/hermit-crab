@@ -37,11 +37,61 @@ function selectGoldenFrame(){
  else frame=a.elapsed<.055&&state.vy<0?0:state.vy< -260?1:Math.abs(state.vy)<=260?2:3;
  return {mode,frame,facing:a.facing};
 }
+
+// Shell-only artwork derived from the existing sprites. No squash/stretch is applied.
+const shellCache=new Map();
+function shellPath(c,kind,painted){
+ c.beginPath();
+ if(painted){
+  c.moveTo(5,10);c.lineTo(312,10);c.lineTo(312,176);
+  c.bezierCurveTo(301,191,289,199,272,204);
+  c.bezierCurveTo(250,214,218,218,188,223);
+  c.bezierCurveTo(153,229,124,241,89,245);
+  c.bezierCurveTo(47,250,4,235,5,205);c.closePath();
+ }else{
+  c.moveTo(30,0);c.lineTo(210,0);c.lineTo(207,109);
+  c.bezierCurveTo(198,118,184,122,169,126);
+  c.bezierCurveTo(152,132,137,143,120,151);
+  c.bezierCurveTo(100,158,82,163,65,177);c.lineTo(30,180);c.closePath();
+ }
+}
+function getShellOnly(kind,painted){
+ const key=kind+(painted?'-watercolor':'-legacy'),cached=shellCache.get(key);if(cached)return cached;
+ const im=painted?GOLDEN_ANIMS.idle:assets[`crab-${kind}-0`];if(!imageReady(im))return null;
+ const w=painted?320:250,h=painted?280:190;
+ const layer=document.createElement('canvas');layer.width=w;layer.height=h;const c=layer.getContext('2d');if(!c)return null;
+ c.save();shellPath(c,kind,painted);c.clip();
+ if(painted){
+  c.drawImage(im,0,0,w,h,0,0,w,h);
+  // Repaint the exposed aperture with a dark watercolor-toned interior.
+  c.save();c.beginPath();c.moveTo(130,213);c.bezierCurveTo(155,177,184,166,217,160);c.bezierCurveTo(253,152,280,163,290,179);c.bezierCurveTo(279,201,239,214,195,223);c.bezierCurveTo(164,230,143,227,130,213);c.closePath();c.clip();
+  const g=c.createLinearGradient(155,168,248,230);g.addColorStop(0,'#51354f');g.addColorStop(.55,'#79516d');g.addColorStop(1,'#ad7690');c.fillStyle=g;c.fillRect(115,145,188,91);
+  c.globalAlpha=.18;c.drawImage(im,119,85,75,52,121,153,180,84);c.restore();
+  // Cover the visible eyestalks using adjacent painted shell texture.
+  for(const patch of [[194,130,25,44,164,118,25,44],[235,128,34,47,210,91,34,47]]){
+   const [x,y,pw,ph,sx,sy,sw,sh]=patch;c.save();c.beginPath();c.ellipse(x+pw/2,y+ph/2,pw/2,ph/2,0,0,Math.PI*2);c.clip();c.drawImage(im,sx,sy,sw,sh,x,y,pw,ph);c.restore();
+  }
+ }else{
+  c.drawImage(im,0,0,w,h);
+  // Remove the visible eyes at the edge while preserving the shell silhouette.
+  c.save();c.beginPath();c.moveTo(144,92);c.lineTo(199,82);c.lineTo(199,128);c.lineTo(144,129);c.closePath();c.clip();c.drawImage(im,105,76,39,48,144,83,55,49);c.restore();
+ }
+ c.restore();
+ // Place the shell on the same physical ground line as the crab's feet.
+ const result={layer,w,h,foot:painted?245:kind==='spring'?177:160};
+ shellCache.set(key,result);return result;
+}
+function drawHiddenShell(kind){
+ const painted=kind==='golden'&&goldenArtReady(),shell=getShellOnly(kind,painted);if(!shell)return false;
+ const scale=152/shell.w, facing=kind==='golden'?goldenAnim.facing:(state.vx< -12?-1:1);
+ cx.save();cx.translate(state.x,state.y);cx.scale(facing,1);cx.drawImage(shell.layer,-76,-shell.foot*scale,152,shell.h*scale);cx.restore();return true;
+}
+
 function drawGoldenSprite(){
  const pose=selectGoldenFrame(),im=GOLDEN_ANIMS[pose.mode];
  if(!goldenArtReady())return false;
  const w=152,h=w*GOLDEN_CELL_H/GOLDEN_CELL_W;
- cx.save();cx.translate(state.x,state.y);cx.scale(pose.facing,controls.hide?.72:1);
+ cx.save();cx.translate(state.x,state.y);cx.scale(pose.facing,1);
  cx.drawImage(im,(pose.frame%2)*GOLDEN_CELL_W,Math.floor(pose.frame/2)*GOLDEN_CELL_H,GOLDEN_CELL_W,GOLDEN_CELL_H,-w/2,-h,w,h);
  cx.restore();return true;
 }
@@ -137,7 +187,7 @@ function enterChapter(ch,resetPosition=true){state.chapter=ch;resetGoldenAnimati
 async function begin(){await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
 async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W,MW];let m=0,offset=0;while(m+1<old.length&&x>=offset+old[m]){offset+=old[m];m++}m=Math.min(m,moduleCount(0)-1);x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(old[m]||MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));if(newGolden&&!hasSupport(state.x))state.x=safeSpawn(moduleAt(0,state.x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
 function shellGlyph(kind){const glyphs={golden:'<path d="M12 20C7 20 3 16 3 11a9 9 0 0 1 18 0c0 5-4 9-9 9zM12 15a4 4 0 1 0-4-4c0 3 3 5 6 4"/>',spring:'<path d="M5 19h14L12 3 5 19zM8 12h8m-6-5h4m-7 9h10"/>',heavy:'<path d="M4 15 7 6l7-3 7 7-3 10H8zM7 6l7 7 4 7m-4-7 7-3M4 15l10-2"/>',float:'<ellipse cx="12" cy="12" rx="8" ry="10" transform="rotate(30 12 12)"/><path d="M8 14c-1-3 1-6 4-7"/>'};return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'+glyphs[kind]+'</svg>'}
-function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=C.title;$('chapterName').textContent=C.name;const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('statusLeft').setAttribute('aria-label',state.health+' of 3 hearts');$('hearts').innerHTML=Array.from({length:3},(_,i)=>'<svg viewBox="0 0 24 24" aria-hidden="true" fill="'+(i<state.health?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.5"><path d="M12 20S3 14.6 3 8.6C3 4 8.6 3 12 7c3.4-4 9-3 9 1.6C21 14.6 12 20 12 20z"/></svg>').join('');const slots=$('shellSlots');slots.innerHTML='';for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;b.setAttribute('aria-pressed',String(state.shell===kind));b.innerHTML=shellGlyph(kind);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
+function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=C.title;$('chapterName').textContent=C.name;const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('statusLeft').setAttribute('aria-label',state.health+' of 3 lives');$('hearts').innerHTML=Array.from({length:3},(_,i)=>'<i class="life-dot'+(i<state.health?' full':'')+'"></i>').join('');const slots=$('shellSlots');slots.innerHTML='';slots.hidden=state.available.length<=1;for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;b.setAttribute('aria-pressed',String(state.shell===kind));b.innerHTML=shellGlyph(kind);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
 function equip(kind){if(!state.available.includes(kind))return;state.shell=kind;tone(510);updateHud();save();note(`${SHELLS[kind].name} Shell · ${SHELLS[kind].ability}`,1800)}
 function note(txt,ms=2300){const el=$('message');el.textContent=txt;el.classList.add('show');clearTimeout(state.messages);state.messages=setTimeout(()=>el.classList.remove('show'),ms)}
 function unlock(kind){if(state.available.includes(kind))return;state.available.push(kind);equip(kind);tone(830);note(`Discovered ${SHELLS[kind].name} Shell! ${SHELLS[kind].ability}`,4000);save()}
@@ -189,9 +239,9 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  if(state.chapter===2&&!state.broken){const x=MW+845,y=CHAPTERS[2].floor;cx.fillStyle='#a28bb5cd';cx.strokeStyle='#e6c8de';cx.lineWidth=5;cx.beginPath();cx.moveTo(x-10,y);cx.lineTo(x-8,y-165);cx.lineTo(x+65,y-167);cx.lineTo(x+63,y);cx.closePath();cx.fill();cx.stroke();cx.strokeStyle='#583e72';cx.lineWidth=3;cx.beginPath();cx.moveTo(x+20,y-165);cx.lineTo(x+44,y-122);cx.lineTo(x+15,y-76);cx.lineTo(x+38,y-29);cx.stroke()}
  for(const item of state.picks||[]){if(item.got)continue;cx.font='55px serif';cx.textAlign='center';cx.shadowColor='#fff2b9';cx.shadowBlur=18;cx.fillText('🐚',item.x,item.y-14+Math.sin(state.anim*3+item.x)*5);cx.shadowBlur=0}
  const px=state.x,py=state.y,walk=Math.abs(state.vx)>36&&state.ground;const kind=state.shell,frame=walk?(Math.floor(state.anim*7)%2):0;
- if(kind!=='golden'||!drawGoldenSprite()){
+ if(!(controls.hide&&drawHiddenShell(kind))&&(kind!=='golden'||!drawGoldenSprite())){
   const im=assets[`crab-${kind}-${frame}`],base=assets[`crab-${kind}-0`],sprite=imageReady(im)?im:base;
-  if(imageReady(sprite)){cx.save();cx.translate(px,py);if(state.vx< -12)cx.scale(-1,1);if(controls.hide)cx.scale(1,.72);cx.drawImage(sprite,-76,-116,152,116);cx.restore()}
+  if(imageReady(sprite)){cx.save();cx.translate(px,py);if(state.vx< -12)cx.scale(-1,1);cx.drawImage(sprite,-76,-116,152,116);cx.restore()}
  }
  cx.restore();cx.restore()}
 function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
