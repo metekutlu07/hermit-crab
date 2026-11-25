@@ -266,3 +266,6 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #home .home-art.clean-home .home-buttons button{color:#245e5d!important;border-color:#245e5d!important;text-shadow:none!important;box-shadow:none!important;background:transparent}
 #home .home-art.clean-home .home-buttons button:active{background:rgba(36,94,93,.10)}
 #home #homeCrabLayer{inset:auto;width:0;height:0;pointer-events:none}
+
+/* Restore the independent, full-bleed painted background and sprite composition. */
+#home #homeCrabLayer{inset:0;width:100%;height:100%;pointer-events:none}
