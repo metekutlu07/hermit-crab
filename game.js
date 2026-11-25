@@ -12,6 +12,27 @@ const CHAPTERS=[
 const SHELLS={golden:{name:'Golden',icon:'🐚',ability:'Protection and hiding'},spring:{name:'Spring',icon:'♜',ability:'Double jump'},heavy:{name:'Granite',icon:'◉',ability:'Break fragile walls and withstand current'},float:{name:'Pearl',icon:'◌',ability:'Float on deep water'}};
 const assets={}, canvas=$('stage'),cx=canvas.getContext('2d',{alpha:false}),controls={left:false,right:false,hide:false};
 const state={mode:'home',chapter:0,x:135,y:0,vx:0,vy:0,ground:false,available:['golden'],shell:'golden',health:3,collections:{},broken:false,paused:false,hidden:false,last:0,anim:0,invincible:0,checkpoint:100,cam:0,messages:0,scale:1,originY:0,viewW:800,viewH:600,zoom:1,sound:true,pickups:[]};
+const ZH={
+ 'A Traveler':'小小旅人','in a Shell':'壳中的旅程','Begin Journey':'开始旅程','Shell Collection':'贝壳收藏','Continue Journey':'继续旅程','Settings':'设置',
+ 'Golden Shores':'金色海岸','Coral Gardens':'珊瑚花园','Crystal Caverns':'水晶洞穴','Sea of Stars':'星之海',
+ 'CHAPTER I':'第一章','CHAPTER II':'第二章','CHAPTER III':'第三章','CHAPTER IV':'第四章',
+ 'MENU':'菜单','Lives:':'生命：','Shells:':'贝壳：','HIDE':'躲藏','JUMP':'跳跃',
+ 'Traveler’s Journal':'旅人日志','Resume':'继续','Shell Encyclopedia':'贝壳图鉴','Terrain Editor':'地形编辑器','Restart Chapter':'重新开始本章','Main Menu':'主菜单','Back':'返回','Mute Sound':'关闭声音','Enable Sound':'开启声音','Homecoming':'归家','Return Home':'返回首页','Return to Main Menu':'返回主菜单','See the Homecoming':'查看归家故事','Next Chapter':'下一章',
+ 'Pause the journey, consult your shell encyclopedia, or return to the beach.':'暂停旅程，查看贝壳图鉴，或返回海滩。','Collect specimens across the four chapters and discover their habitats.':'收集四个章节中的贝壳标本，探索它们的栖息地。','Undiscovered shell':'尚未发现的贝壳','Collected':'已收集','Sound:':'声音：','Progress is saved automatically in this browser.':'游戏进度会自动保存在此浏览器。','Desktop: ← → or A/D to move, Space to jump, H to hide.':'电脑：← → 或 A/D 移动，空格跳跃，H 躲藏。','Mobile: hold arrows and tap Jump simultaneously.':'手机：按住方向键，同时点击跳跃。',
+ 'Leaving Home':'离开家园','Explore and discover.':'探索与发现。','Tide pool · Try the jump again!':'潮池 · 再试一次跳跃！','You fell into the tide pool.':'你掉进了潮池。','Careful! One heart lost.':'小心！失去一点生命。','The traveler retreats into its shell · Checkpoint':'旅人退回壳中 · 返回检查点',
+ 'Scallop':'扇贝','Cowrie':'宝螺','Cockle':'鸟蛤','Limpet':'帽贝','Moon Snail':'月螺','Turret Shell':'塔螺','Cone Shell':'芋螺','Murex':'骨螺','Olive Shell':'榧螺','Abalone':'鲍鱼','Ammonite':'菊石','Fossil Gastropod':'腹足类化石','Fossil Bivalve':'双壳类化石','Nautilus':'鹦鹉螺','Mineral Shell':'矿物贝壳','Pearl Oyster':'珍珠贝','Paper Nautilus':'船蛸','Moon Abalone':'月鲍','Glass Shell':'玻璃贝壳','Starlight Shell':'星光贝壳',
+ 'Encyclopedia specimen:':'图鉴标本：','End of terrain test':'地形测试结束'
+};
+let gameLanguage='en';
+const tr=v=>gameLanguage==='zh'?(ZH[v]||v):v;
+function translatedText(v){if(gameLanguage!=='zh')return v;if(ZH[v])return ZH[v];return Object.keys(ZH).sort((a,b)=>b.length-a.length).reduce((t,k)=>t.split(k).join(ZH[k]),v)}
+function updateHomeLanguage(){
+ document.documentElement.lang=gameLanguage==='zh'?'zh-CN':'en';
+ const title=$('homeTitle');if(title){const a=title.querySelectorAll('span');a[0].textContent=tr('A Traveler');a[1].textContent=tr('in a Shell')}
+ for(const [id,label] of [['begin','Begin Journey'],['collection','Shell Collection'],['continue','Continue Journey'],['settingsHome','Settings'],['pauseBtn','MENU'],['livesLabel','Lives:'],['shellsLabel','Shells:']]){const el=$(id);if(el)el.textContent=tr(label)}
+ for(const [id,label] of [['hide','HIDE'],['jump','JUMP']]){const el=$(id);if(el)el.querySelector('span').textContent=tr(label)}
+}
+
 let buttonPointers=new Map(),touchPointers=new Map(),audio=null;
 function safeGet(){try{return JSON.parse(localStorage.getItem('travelerShellSave')||'null')}catch{return null}}
 function save(){if(testModule)return;try{localStorage.setItem('travelerShellSave',JSON.stringify({chapter:state.chapter,x:state.x,layout:newGolden&&state.chapter===0?'golden-v2':'legacy',layoutWidths:newGolden&&state.chapter===0?[...newWidths]:null,health:state.health,available:state.available,shell:state.shell,collections:state.collections,broken:state.broken}))}catch{}}
@@ -192,9 +213,9 @@ function enterChapter(ch,resetPosition=true){state.chapter=ch;resetGoldenAnimati
 async function begin(){await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)}
 async function resume(){const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W,MW];let m=0,offset=0;while(m+1<old.length&&x>=offset+old[m]){offset+=old[m];m++}m=Math.min(m,moduleCount(0)-1);x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(old[m]||MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));if(newGolden&&!hasSupport(state.x))state.x=safeSpawn(moduleAt(0,state.x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
 function shellGlyph(kind){const glyphs={golden:'<path d="M12 20C7 20 3 16 3 11a9 9 0 0 1 18 0c0 5-4 9-9 9zM12 15a4 4 0 1 0-4-4c0 3 3 5 6 4"/>',spring:'<path d="M5 19h14L12 3 5 19zM8 12h8m-6-5h4m-7 9h10"/>',heavy:'<path d="M4 15 7 6l7-3 7 7-3 10H8zM7 6l7 7 4 7m-4-7 7-3M4 15l10-2"/>',float:'<ellipse cx="12" cy="12" rx="8" ry="10" transform="rotate(30 12 12)"/><path d="M8 14c-1-3 1-6 4-7"/>'};return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'+glyphs[kind]+'</svg>'}
-function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=C.title;$('chapterName').textContent=C.name;const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('statusLeft').setAttribute('aria-label',state.health+' of 3 lives');$('hearts').textContent=state.health;const slots=$('shellSlots');slots.innerHTML='';slots.hidden=state.available.length<=1;for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;b.setAttribute('aria-pressed',String(state.shell===kind));b.innerHTML=shellGlyph(kind);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
+function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=tr(C.title);$('chapterName').textContent=tr(C.name);const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('statusLeft').setAttribute('aria-label',state.health+' of 3 lives');$('hearts').textContent=state.health;const slots=$('shellSlots');slots.innerHTML='';slots.hidden=state.available.length<=1;for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;b.setAttribute('aria-pressed',String(state.shell===kind));b.innerHTML=shellGlyph(kind);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
 function equip(kind){if(!state.available.includes(kind))return;state.shell=kind;tone(510);updateHud();save();note(`${SHELLS[kind].name} Shell · ${SHELLS[kind].ability}`,1800)}
-function note(txt,ms=2300){const el=$('message');el.textContent=txt;el.classList.add('show');clearTimeout(state.messages);state.messages=setTimeout(()=>el.classList.remove('show'),ms)}
+function note(txt,ms=2300){const el=$('message');el.textContent=translatedText(txt);el.classList.add('show');clearTimeout(state.messages);state.messages=setTimeout(()=>el.classList.remove('show'),ms)}
 function unlock(kind){if(state.available.includes(kind))return;state.available.push(kind);equip(kind);tone(830);note(`Discovered ${SHELLS[kind].name} Shell! ${SHELLS[kind].ability}`,4000);save()}
 function clearHeld(){controls.left=controls.right=controls.hide=false;buttonPointers.clear();touchPointers.clear();document.querySelectorAll('.ctrl').forEach(b=>b.classList.remove('pressed'))}
 function release(id){if(!buttonPointers.has(id))return;const a=buttonPointers.get(id);buttonPointers.delete(id);if(a==='left'||a==='right'||a==='hide')controls[a]=[...buttonPointers.values()].includes(a);const b=$(a);if(b&&!controls[a])b.classList.remove('pressed')}
@@ -250,13 +271,38 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  }
  cx.restore();cx.restore()}
 function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
-function showDialog(title,html,buttons){state.paused=true;clearHeld();$('dialogTitle').textContent=title;$('dialogBody').innerHTML=html;const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=b.text;btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
+function showDialog(title,html,buttons){state.paused=true;clearHeld();$('dialogTitle').textContent=tr(title);$('dialogBody').innerHTML=translatedText(html);const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=tr(b.text);btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
 function closeDialog(){ $('overlay').classList.remove('visible');$('overlay').setAttribute('aria-hidden','true');state.paused=false;clearHeld()}
 function pause(){showDialog('Traveler’s Journal','<p>Pause the journey, consult your shell encyclopedia, or return to the beach.</p>',[{text:'Resume',fn:closeDialog},{text:'Shell Encyclopedia',fn:encyclopedia},{text:'Settings',fn:settings},{text:'Terrain Editor',fn:()=>window.open('terrain.html','_blank')},{text:'Restart Chapter',fn:()=>{closeDialog();enterChapter(state.chapter)}},{text:'Main Menu',fn:()=>{closeDialog();mode('home')}}])}
 function encyclopedia(){let html='<p class="progress">Collect specimens across the four chapters and discover their habitats.</p>';for(let c=0;c<4;c++){html+=`<h3>${CHAPTERS[c].name}</h3>`;CHAPTERS[c].specimens.forEach((s,i)=>{const got=state.collections[`${c}-${i}`];html+=`<div class="entry ${got?'':'locked'}"><span>${got?'🐚':'◇'} ${got?s:'Undiscovered shell'}</span><span>${got?'Collected':'?'}</span></div>`})}showDialog('Shell Encyclopedia',html,[{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
 function settings(){showDialog('Settings',`<p>Sound: <strong>${state.sound?'On':'Off'}</strong></p><p>Desktop: ← → or A/D to move, Space to jump, H to hide.<br>Mobile: hold arrows and tap Jump simultaneously.</p><p>Progress is saved automatically in this browser.</p>`,[{text:state.sound?'Mute Sound':'Enable Sound',fn:()=>{state.sound=!state.sound;settings()}},{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
 function showEpilogue(){showDialog('Homecoming',`<img src="${assetURL('epilogue.jpg')}" alt="Homecoming painting" style="max-width:100%;border-radius:12px"><p>The traveler returns with four different homes, and a world of memories.</p>`,[{text:'Return Home',fn:()=>{closeDialog();mode('home')}}])}
 $('begin').addEventListener('click',begin);$('continue').addEventListener('click',resume);$('collection').addEventListener('click',encyclopedia);$('settingsHome').addEventListener('click',settings);$('pauseBtn').addEventListener('click',pause);$('soundHome').addEventListener('click',()=>{state.sound=!state.sound;$('muteMark').textContent=state.sound?'':'×';$('soundHome').setAttribute('aria-pressed',String(!state.sound))});
+
+function setupEntryGate(){
+ const gate=$('entryGate');if(!gate)return;
+ if(testModule){gate.hidden=true;return}
+ const app=$('app'),fullGroup=$('gateFullGroup'),full=$('gateFull'),sound=$('gateSound'),enter=$('gateEnter');
+ app.inert=true;state.sound=false;
+ const mq=window.matchMedia('(min-width:700px) and (hover:hover) and (pointer:fine)');
+ const request=document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen,exit=document.exitFullscreen||document.webkitExitFullscreen;
+ function fullActive(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
+ function refresh(){
+  const zh=gameLanguage==='zh';gate.lang=zh?'zh-CN':'en';
+  $('gateLanguageLabel').textContent=zh?'选择语言':'Language';$('gateSoundLabel').textContent=zh?'声音':'Sound';$('gateFullLabel').textContent=zh?'全屏':'Full screen';enter.textContent=zh?'进入':'Enter';
+  $('gateSoundText').textContent=zh?(state.sound?'开启':'关闭'):(state.sound?'On':'Off');
+  sound.setAttribute('aria-pressed',String(state.sound));$('gateSoundPath').setAttribute('d',state.sound?'M3 9h4l5-4v14l-5-4H3zM15 8q5 4 0 8m3-11q8 7 0 14':'M3 9h4l5-4v14l-5-4H3zM16 9l6 6m0-6-6 6');
+  fullGroup.hidden=!(mq.matches&&request&&exit);full.setAttribute('aria-pressed',String(fullActive()));$('gateFullText').textContent=zh?(fullActive()?'开启':'关闭'):(fullActive()?'On':'Off');
+ }
+ gate.addEventListener('change',()=>{gameLanguage=gate.querySelector('input[name="language"]:checked').value;refresh()});
+ sound.addEventListener('click',()=>{state.sound=!state.sound;refresh()});
+ full.addEventListener('click',async()=>{try{if(fullActive())await exit.call(document);else await request.call(document.documentElement)}catch{}refresh()});
+ document.addEventListener('fullscreenchange',refresh);document.addEventListener('webkitfullscreenchange',refresh);mq.addEventListener?.('change',refresh);
+ gate.addEventListener('submit',e=>{e.preventDefault();if(enter.disabled)return;enter.disabled=true;updateHomeLanguage();updateHud();app.inert=false;if(state.sound){try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();audio.resume?.().catch(()=>{})}catch{}}gate.classList.add('gate-depart');setTimeout(()=>{gate.hidden=true;$('begin').focus?.()},650)});
+ refresh();
+}
+
+setupEntryGate();
 // Help testing without exposing implementation details in the interface.
 if(testModule)newAssetsReady.then(()=>{if(newReady){enterChapter(0);const m=Math.max(0,Math.min(loadedCount-1,testModule-1));state.x=safeSpawn(m);state.y=floorAt(0,state.x)-1;state.ground=false;terrainDebug=true;note('Terrain test · Module '+String(m+1).padStart(2,'0'),2400)}});
 window.travelerDebug={state,CHAPTERS,goToChapter:n=>enterChapter(Math.max(0,Math.min(3,n))),advanceToEnd:()=>{state.x=chapterWidth(state.chapter)-130;state.y=floorAt(state.chapter,state.x);},setTerrainDebug:value=>{terrainDebug=!!value},getTerrain:()=>newGolden?goldenSurfaces:segments[state.chapter],getObstacles:()=>({walls:goldenWalls,hazards:goldenHazards}),newArtReady:()=>newReady,goldenArtReady,save};

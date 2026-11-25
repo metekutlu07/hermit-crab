@@ -5,10 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#302846">
 <title>A Traveler in a Shell · Playable Game</title>
-<link rel="stylesheet" href="style.css?v=homegraphic02">
+<link rel="stylesheet" href="style.css?v=homegraphic03">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 </head>
 <body>
+<form id="entryGate" class="language-gate" aria-label="Entry preferences">
+  <fieldset><legend id="gateLanguageLabel">Language</legend><div class="language-options"><label><input type="radio" name="language" value="zh"><span>中文</span></label><label><input type="radio" name="language" value="en" checked><span>English</span></label></div></fieldset>
+  <div class="gate-settings"><fieldset><legend id="gateSoundLabel">Sound</legend><button type="button" id="gateSound" class="gate-option" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="gateSoundPath" d="M3 9h4l5-4v14l-5-4H3zM16 9l6 6m0-6-6 6"/></svg><span id="gateSoundText">Off</span></button></fieldset>
+  <fieldset id="gateFullGroup" hidden><legend id="gateFullLabel">Full screen</legend><button type="button" id="gateFull" class="gate-option" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13 0h5v-5"/></svg><span id="gateFullText">Off</span></button></fieldset></div>
+  <button type="submit" id="gateEnter" class="gate-enter">Enter</button>
+</form>
 <main id="app">
   <section id="home" class="screen visible" aria-label="Game home screen">
     <div class="home-art clean-home"><picture><source media="(orientation: portrait)" srcset="assets/home-portrait-final.jpeg"><img src="assets/home-landscape-final.jpeg" alt="A watercolor hermit crab on a beach" draggable="false" fetchpriority="high"></picture><h1 id="homeTitle" class="home-title"><span>A Traveler</span> <span>in a Shell</span></h1><div class="home-buttons" aria-label="Main menu">
@@ -26,8 +32,8 @@
       <div id="chapterTitle" class="hud-top-item"><span id="chapterName">Golden Shores</span><small id="chapterIndex">CHAPTER I</small></div>
       <div class="status-strip" id="statusStack" aria-label="Game status">
         <button id="pauseBtn" class="status-frame" aria-label="Pause and menu">MENU</button>
-        <div id="statusLeft" class="status-frame" aria-label="3 of 3 lives">Lives: <span id="hearts">3</span>/3</div>
-        <div id="statusRight" class="status-frame">Shells: <span id="collectedCount">0</span>/5</div>
+        <div id="statusLeft" class="status-frame" aria-label="3 of 3 lives"><span id="livesLabel">Lives:</span> <span id="hearts">3</span>/3</div>
+        <div id="statusRight" class="status-frame"><span id="shellsLabel">Shells:</span> <span id="collectedCount">0</span>/5</div>
       </div>
     </header>
     <div id="controls" aria-label="Game controls">
@@ -47,6 +53,6 @@
   </section>
 </main>
 <script src="terrain-data.js?v=2"></script>
-<script src="game.js?v=homegraphic02"></script>
+<script src="game.js?v=homegraphic03"></script>
 </body>
 </html>
