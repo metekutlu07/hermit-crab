@@ -2,12 +2,14 @@
    Coordinates are source-image pixels. Nothing is warped or resampled. */
 (function(){
 'use strict';
-const reduced=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const mode=typeof location==='object'?new URLSearchParams(location.search).get('effects'):null;
+const reduced=mode!=='on'&&mode!=='strong'&&typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const intensity=mode==='strong'?1.5:1;
 const rect=(x,y,w,h)=>[[x,y],[x+w,y],[x+w,y+h],[x,y+h]];
 // Conservative, hand-selected open-water patches, not collision polygons.
 // Avoid land, coral, plant silhouettes and stepping stones.
 const water=[
- [rect(480,424,326,70),rect(485,508,118,42),rect(1189,423,164,48),rect(1120,425,232,18)],
+ [rect(420,424,375,74),rect(474,508,135,48),rect(1189,423,164,48),rect(1120,425,232,18)],
  [rect(145,418,1290,25),rect(193,447,235,30),rect(790,452,489,41)],
  [rect(275,380,540,35),rect(372,419,230,60),[[793,568],[864,554],[956,557],[1052,573],[1085,585],[1035,595],[895,598],[826,587]]],
  [rect(284,399,369,28),rect(1137,399,183,49),rect(1080,463,185,40)],
@@ -21,7 +23,7 @@ const water=[
 ];
 const heights=[938,938,847,847,847,847,847,847,847,847,705];
 const spores=[
- [[125,505,160,108],[1190,508,220,72]],
+ [[70,350,265,248],[350,280,220,290],[1190,508,220,72]],
  [[435,490,270,90],[1240,522,170,65]],
  [[375,501,210,65],[1270,460,170,80]],
  [[90,475,190,100],[685,489,170,94]],
@@ -33,24 +35,24 @@ const spores=[
  [[350,365,220,105],[1280,390,195,85]],
  [[175,320,220,135],[1210,369,215,118]]
 ];
-const birdScenes=new Set([1,3,5,8,10]);
+const birdScenes=new Set([0,1,3,5,8,10]);
 const mistScenes=new Set([0,1,3,5,8]);
 const rand=(n)=>{const x=Math.sin(n*127.1+311.7)*43758.5453123;return x-Math.floor(x)};
 function bounds(p){return [Math.min(...p.map(a=>a[0])),Math.min(...p.map(a=>a[1])),Math.max(...p.map(a=>a[0])),Math.max(...p.map(a=>a[1]))]}
 function clip(ctx,p){ctx.beginPath();p.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip()}
-const areas=water.map((ps,m)=>ps.map((p,j)=>{const [x,y,r,b]=bounds(p),seed=(m+1)*1000+j*100;const count=Math.min(20,Math.max(3,Math.round((r-x)*(b-y)/2400)));
-return {p,x,y,r,b,glints:Array.from({length:count},(_,i)=>{const k=seed+i*9;return {x:x+rand(k)*(r-x),y:y+rand(k+1)*(b-y),length:8+rand(k+2)*21,phase:rand(k+3)*Math.PI*2,period:3.8+rand(k+4)*5,drift:4+rand(k+5)*6}})} }));
+const areas=water.map((ps,m)=>ps.map((p,j)=>{const [x,y,r,b]=bounds(p),seed=(m+1)*1000+j*100;const count=Math.min(35,Math.max(6,Math.round((r-x)*(b-y)/1200)));
+return {p,x,y,r,b,glints:Array.from({length:count},(_,i)=>{const k=seed+i*9;return {x:x+rand(k)*(r-x),y:y+rand(k+1)*(b-y),length:14+rand(k+2)*30,phase:rand(k+3)*Math.PI*2,period:2.8+rand(k+4)*4,drift:8+rand(k+5)*12}})} }));
 function shimmer(ctx,a,t,warm){
  ctx.save();clip(ctx,a.p);
  for(const g of a.glints){
   const phase=t*Math.PI*2/g.period+g.phase;
-  const pulse=Math.pow(Math.max(0,Math.sin(phase)),2);
+  const pulse=Math.pow(.5+.5*Math.sin(phase),1.6);
   if(pulse<.05)continue;
   const x=g.x+Math.sin(phase*.5)*g.drift,y=g.y+Math.sin(phase)*.8,l=g.length*(.8+pulse*.2);
-  ctx.globalAlpha=(warm?.20:.16)*pulse;
+  ctx.globalAlpha=Math.min(.85,(warm?.58:.48)*pulse*intensity);
   const grad=ctx.createLinearGradient(x-l/2,y,x+l/2,y);const color=warm?'255,221,157':'232,240,235';
   grad.addColorStop(0,'rgba('+color+',0)');grad.addColorStop(.5,'rgba('+color+',1)');grad.addColorStop(1,'rgba('+color+',0)');
-  ctx.strokeStyle=grad;ctx.lineWidth=.8+pulse*.65;ctx.lineCap='round';
+  ctx.strokeStyle=grad;ctx.lineWidth=1.4+pulse*1.1;ctx.lineCap='round';
   ctx.beginPath();ctx.moveTo(x-l/2,y+.3);ctx.quadraticCurveTo(x,y-1,x+l/2,y);ctx.stroke();
  }
  ctx.restore();
@@ -60,37 +62,37 @@ function mist(ctx,a,t,m){
  ctx.save();clip(ctx,a.p);const cx=(a.x+a.r)/2+Math.sin(t/12+m)*((a.r-a.x)*.16),cy=a.y+(a.b-a.y)*.48;
  ctx.translate(cx,cy);ctx.scale(1,.12);
  const radius=Math.min(180,(a.r-a.x)*.54),g=ctx.createRadialGradient(0,0,0,0,0,radius);
- g.addColorStop(0,'rgba(238,218,229,.055)');g.addColorStop(.55,'rgba(238,218,229,.022)');g.addColorStop(1,'rgba(238,218,229,0)');ctx.fillStyle=g;ctx.fillRect(-radius,-radius,radius*2,radius*2);ctx.restore();
+ g.addColorStop(0,'rgba(238,218,229,.12)');g.addColorStop(.55,'rgba(238,218,229,.045)');g.addColorStop(1,'rgba(238,218,229,0)');ctx.fillStyle=g;ctx.fillRect(-radius,-radius,radius*2,radius*2);ctx.restore();
 }
 function floatSpores(ctx,m,t){
  for(let j=0;j<spores[m].length;j++){
   const [x,y,w,h]=spores[m][j];
-  for(let k=0;k<4;k++){
-   const seed=m*211+j*97+k*13+3,period=7+rand(seed)*6,phase=(t/period+rand(seed+1))%1;
+  for(let k=0;k<(m===0?9:7);k++){
+   const seed=m*211+j*97+k*13+3,period=5+rand(seed)*5,phase=(t/period+rand(seed+1))%1;
    const fade=Math.sin(Math.PI*phase)**2;
-   const px=x+rand(seed+2)*w+Math.sin(phase*6.28+seed)*12+phase*10;
-   const py=y+rand(seed+3)*h-phase*20;
-   ctx.globalAlpha=fade*(.22+rand(seed+4)*.17);
-   ctx.fillStyle=k%3===0?'#E3C9F4':'#FFE4B2';
-   ctx.beginPath();ctx.ellipse(px,py,.7+rand(seed+5)*.8,.8+rand(seed+6)*.6,0,0,Math.PI*2);ctx.fill();
+   const px=x+rand(seed+2)*w+Math.sin(phase*6.28+seed)*19+phase*19;
+   const py=y+rand(seed+3)*h-phase*44;
+   ctx.globalAlpha=Math.min(.85,fade*(.52+rand(seed+4)*.20)*intensity);
+   ctx.fillStyle=k%3===0?'#E5C9F5':'#FFF0C5';
+   ctx.beginPath();ctx.ellipse(px,py,1.4+rand(seed+5)*1.4,1.3+rand(seed+6)*1.3,0,0,Math.PI*2);ctx.fill();
   }
  }
 }
 function distantBirds(ctx,m,t){
  if(!birdScenes.has(m))return;
  // Infrequent silhouettes, well above the horizon, distinct from the large predator.
- const period=31+m%3*5,phase=(t+m*4.7)%period;
- if(phase>9)return;
+ const period=23+m%3*4,phase=(t+m*3.1+2)%period;
+ if(phase>11)return;
  for(let i=0;i<2;i++){
-  const u=(phase-i*.52)/8;if(u<0||u>1)continue;
-  const x=-28+u*1590,y=heights[m]*.255+Math.sin(u*Math.PI*1.3+i)*11+i*12;
-  const a=Math.min(1,u*8,(1-u)*8),span=7+i*1.4,wing=2.8+Math.sin(t*5+i*1.7)*2.1;
-  ctx.save();ctx.translate(x,y);ctx.globalAlpha=.36*a;ctx.strokeStyle='#574566';ctx.lineWidth=1.15;ctx.lineCap='round';
+  const u=(phase-i*.65)/10;if(u<0||u>1)continue;
+  const x=m===0?380+u*1170:-28+u*1590,y=(m===0?286:heights[m]*.255)+Math.sin(u*Math.PI*1.3+i)*11+i*12;
+  const a=Math.min(1,u*8,(1-u)*8),span=10+i*1.8,wing=4+Math.sin(t*5+i*1.7)*3;
+  ctx.save();ctx.translate(x,y);ctx.globalAlpha=Math.min(.8,.65*a*intensity);ctx.strokeStyle='#574566';ctx.lineWidth=1.65;ctx.lineCap='round';
   ctx.beginPath();ctx.moveTo(-span,-wing);ctx.quadraticCurveTo(-span*.44,-wing-1,0,0);ctx.quadraticCurveTo(span*.44,-wing-1,span,-wing);ctx.stroke();ctx.restore();
  }
 }
 function draw(ctx,im,m,ox,oy,w,h,t,viewW,danger){
- if(reduced||!areas[m]||!Number.isFinite(t)||!w||!h)return;
+ if(mode==='off'||reduced||!areas[m]||!Number.isFinite(t)||!w||!h)return;
  ctx.save();ctx.translate(ox,oy);ctx.scale(w/1536,h/heights[m]);
  // Keep every effect inside its own landscape; the original artwork is never moved.
  ctx.beginPath();ctx.rect(0,0,1536,heights[m]);ctx.clip();
