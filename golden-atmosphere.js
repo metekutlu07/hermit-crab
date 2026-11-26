@@ -144,7 +144,7 @@ function floatSpores(ctx,m,t){
 // Persistent world-space field. All positions are expressed in units of landscape height,
 // never screen pixels. The camera is used only when projecting positions for drawing.
 const pollen={items:[],t:null,cam:0,start:null,end:null};
-const layers=[{size:[.024,.036],speed:.026},{size:[.031,.063],speed:.043},{size:[.048,.055],speed:.058}];
+const layers=[{size:[.024,.036],speed:.026},{size:[.031,.040],speed:.043},{size:[.038,.044],speed:.058}];
 const between=(a,b,r)=>a+(b-a)*r;
 function populate(start,end){
  const items=[],spacing=.39;
