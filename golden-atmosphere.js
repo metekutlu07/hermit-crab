@@ -28,6 +28,32 @@ const wind=[1,1,-1,1,1,-1,1,-1,1,1,-1];
 const atlas=new Image();atlas.src='assets/golden-organic-spores.png?v=1';
 const cell=160;
 const ready=()=>atlas.complete&&atlas.naturalWidth===640&&atlas.naturalHeight===480;
+// Reuse the painted silhouette and grain, with two new pigment palettes.
+// Build once, not per frame, and leave the original alpha channel untouched.
+const pigmentAtlases=[];
+const pigments=[
+ [[80,39,36],[154,67,55],[222,126,99],[255,201,161],[255,239,211]], // warm coral
+ [[84,34,61],[151,62,101],[215,119,151],[249,193,207],[255,238,234]] // rose pink
+];
+function recolorPixel(r,g,b,palette){
+ const light=.2126*r+.7152*g+.0722*b;
+ const stops=[0,85,145,205,255];
+ let j=0;while(j<3&&light>stops[j+1])j++;
+ const t=(light-stops[j])/(stops[j+1]-stops[j]);
+ return palette[j].map((v,k)=>Math.round(v+(palette[j+1][k]-v)*t));
+}
+function pigmentAtlas(family){
+ if(family<2)return atlas;
+ const index=family-2;if(pigmentAtlases[index])return pigmentAtlases[index];
+ if(!ready()||typeof document==='undefined')return atlas;
+ try{
+  const c=document.createElement('canvas');c.width=640;c.height=480;
+  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(atlas,0,0);
+  const im=x.getImageData(0,0,c.width,c.height),d=im.data;
+  for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const rgb=recolorPixel(d[i],d[i+1],d[i+2],pigments[index]);d[i]=rgb[0];d[i+1]=rgb[1];d[i+2]=rgb[2]}
+  x.putImageData(im,0,0);pigmentAtlases[index]=c;return c;
+ }catch(e){pigmentAtlases[index]=atlas;return atlas}
+}
 const birdScenes=new Set([0,1,3,5,8,10]);
 const mistScenes=new Set([0,1,3,5,8]);
 const rand=(n)=>{const x=Math.sin(n*127.1+311.7)*43758.5453123;return x-Math.floor(x)};
@@ -90,12 +116,12 @@ function emit(m,W,H,seeded=false){
  const layer=r(1)<.40?0:r(1)<.92?1:2;
  const count=Math.min(free,layer===2?1:r(2)<.45?1:r(2)<.78?2:3);
  const L=layers[layer],cy=H*between(.13,.54,r(4)),cx=seeded?W*between(.30,.88,r(5)):W+H*.07;
- const common=between(...L.speed,r(6))*H,phi=r(7)*Math.PI*2, family=r(8)<.56?0:6;
+ const common=between(...L.speed,r(6))*H,phi=r(7)*Math.PI*2, family=Math.floor(r(8)*4);
  for(let k=0;k<count;k++){
   const n=seed+k*73,q=i=>rand(n+i*17);
   const size=H*between(...L.size,q(1))*(k===0?1:k===1?.68:.48);
-  const art=family+Math.floor(q(3)*6);
-  pollen.items.push({layer,art,size,x:cx+k*H*.057+H*(q(4)-.5)*.025,y:cy+H*(q(5)-.5)*.12,
+  const art=(family===1?6:0)+Math.floor(q(3)*6);
+  pollen.items.push({layer,art,family,size,x:cx+k*H*.057+H*(q(4)-.5)*.025,y:cy+H*(q(5)-.5)*.12,
    age:seeded?1.7:q(6)*.45,life:Math.max(22,(W+H*.4)/common*1.8),
    vx:common*between(.79,1.23,q(7)),vy:H*between(-.013,.011,q(8)),
    phase:q(9)*Math.PI*2,phi,rate:between(.38,.86,q(10)),rotation:q(11)*Math.PI*2,
@@ -130,11 +156,11 @@ function tick(m,W,H,t,cam){
 }
 function drawPollen(ctx,front,W,H){
  if(mode==='off'||reduced||!ready())return;
- for(const q of pollen.items){
-  if((q.layer===2)!==front||q.x+q.size<0||q.x-q.size>W)continue;
+ for(const q of pollen.items.slice().sort((a,b)=>a.size-b.size)){
+  if((q.size>H*.030)!==front||q.x+q.size<0||q.x-q.size>W)continue;
   const size=q.size;
   ctx.save();ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.translate(q.x,q.y);ctx.rotate(q.rotation+q.rock*Math.sin(q.age*.64+q.phase)+.12*Math.sin(q.age*1.31+q.phi));
-  ctx.drawImage(atlas,q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
+  ctx.drawImage(pigmentAtlas(q.family),q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
  }
 }
 function pollenReset(){pollen.t=null;pollen.items=[]}
