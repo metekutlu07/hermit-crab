@@ -346,13 +346,14 @@ function makePickups(){
  }
  state.picks=C.specimens.map((name,i)=>{const x=legacyX(state.chapter,350+i*890+(i%2)*170);return {x,y:floorAt(state.chapter,x)-35-(i===2?75:0),id:state.chapter+'-'+i,name,got:!!state.collections[state.chapter+'-'+i],artIndex:state.chapter===0?i:undefined}}).filter(item=>item.x<chapterWidth(state.chapter)-110);
 }
-const oldEnter=enterChapter;enterChapter=function(ch,reset=true){newGolden=ch===0&&newReady;birdEvent=null;birdDone.clear();oldEnter(ch,reset);makePickups()};
+const oldEnter=enterChapter;enterChapter=function(ch,reset=true){newGolden=ch===0&&newReady;window.GoldenAtmosphere?.pollenReset();birdEvent=null;birdDone.clear();oldEnter(ch,reset);makePickups()};
 function resize(){const r=canvas.getBoundingClientRect(),dpr=Math.min(3,devicePixelRatio||1);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);cx.setTransform(dpr,0,0,dpr,0,0);state.viewW=Math.max(1,r.width);state.viewH=Math.max(1,r.height);state.zoom=newGolden?1:r.width<650&&r.height>r.width?1.045:1;state.scale=state.viewH/MH*state.zoom;state.originY=(state.viewH-MH*state.scale)/2}
 window.addEventListener('resize',resize);resize();
 function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;const C=CHAPTERS[state.chapter],S=state.scale,W=state.viewW,H=state.viewH;
  cx.save();cx.clearRect(0,0,W,H);cx.fillStyle=C.palette;cx.fillRect(0,0,W,H);
  const camera=Math.max(0,Math.min(chapterWidth(state.chapter)-W/S,state.x-W/S*.40));state.cam=camera;
  for(let m=0;m<moduleCount(state.chapter);m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&newModule[m]?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth){cx.drawImage(im,ox,state.originY,width*S,MH*S);if(newGolden&&newModule[m]&&state.chapter===0)window.GoldenAtmosphere?.draw(cx,im,m,ox,state.originY,width*S,MH*S,state.anim,W,!!birdEvent)}}
+ if(newGolden&&state.chapter===0&&!terrainDebug){window.GoldenAtmosphere?.tick(moduleAt(0,state.x),W,H,state.anim,camera*S);window.GoldenAtmosphere?.drawPollen(cx,false,W,H)}
  cx.save();cx.translate(-camera*S,state.originY);cx.scale(S,S);
  if(terrainDebug){cx.save();cx.lineWidth=3;const stroke=(lines,color,closed=false)=>{cx.strokeStyle=color;for(const l of lines){cx.beginPath();l.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));if(closed){cx.closePath();cx.fillStyle='rgba(75,195,255,.20)';cx.fill()}cx.stroke()}};
  if(newGolden){stroke(goldenGround,'#72ffac');stroke(goldenPlatforms,'#ffd56a');stroke(goldenWalls,'#ff657b');stroke(goldenHazards,'#63cbff',true)}else stroke(segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]),'#72ffac');cx.restore()}
@@ -387,12 +388,7 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
   if(imageReady(sprite)){cx.save();cx.translate(px,py);if(state.vx< -12)cx.scale(-1,1);cx.drawImage(sprite,-76,-116,152,116);cx.restore()}
  }
  cx.restore();
- // Rare large forms pass in front of the traveler; HUD is separate from this canvas.
- if(newGolden&&state.chapter===0&&!terrainDebug)for(let m=0;m<moduleCount(0);m++){
-  const width=moduleWidth(0,m),ox=(moduleStart(0,m)-camera)*S;
-  if(ox>W+2||ox+width*S<0||!newModule[m])continue;
-  window.GoldenAtmosphere?.foreground(cx,m,ox,state.originY,width*S,MH*S,state.anim,W);
- }
+ if(newGolden&&state.chapter===0&&!terrainDebug)window.GoldenAtmosphere?.drawPollen(cx,true,W,H);
  cx.restore()}
 function updateBirdWarning(){const el=$('birdWarning'),b=birdEvent;const active=!!b&&!b.resolved&&state.mode==='game'&&!state.paused;el.hidden=!active;if(!active)return;const remaining=Math.max(0,b.warning-b.t);el.querySelector('span').textContent=(gameLanguage==='zh'?'按住躲藏键':'HOLD HIDE')+' · '+remaining.toFixed(1)+'s';el.querySelector('i').style.transform='scaleX('+Math.max(0,Math.min(1,remaining/b.warning))+')';}
 function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);updateBirdWarning();updateAtmosphere();render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
