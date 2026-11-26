@@ -434,15 +434,41 @@ function showGoldenIntro(onStart){
   if(!active)return;active=false;buttons.querySelector('button')?.setAttribute('disabled','');primeAudio();
   try{if(onStart)await onStart()}finally{goldenIntroBusy=false;overlay.classList.remove('story-intro');delete overlay.dataset.story;closeDialog()}
  }
- function bird(){
+ const fadeMs=reduced?0:650;
+ const holdMs=reduced?0:1000;
+ async function fadeOut(){
+  const dialog=overlay.querySelector('.dialog');
+  dialog.classList.add('story-fade-out');
+  await delay(fadeMs);
+ }
+ function revealScene(){
+  const dialog=overlay.querySelector('.dialog');
+  dialog.classList.remove('story-fade-out');
+  // Force the transition to start from the hidden state after changing the painting.
+  dialog.getBoundingClientRect();
+  dialog.classList.remove('story-ui-hidden');
+ }
+ async function bird(){
+  if(!active||overlay.dataset.story!=='wake')return;
+  const next=buttons.querySelector('button');if(next.disabled)return;next.disabled=true;
+  await fadeOut();
+  if(!active)return;
   scene('bird',images[5],zh?'飞鸟靠近时，躲进你的壳中，直到危险远去。':'When birds approach, retreat into your shell until danger passes.');
-  button(zh?'开始':'Start',start);
+  const startButton=button(zh?'开始':'Start',start);startButton.disabled=true;
+  revealScene();await delay(fadeMs);startButton.disabled=false;
  }
  async function awaken(){
+  await fadeOut();
+  if(!active)return;
+  const dialog=overlay.querySelector('.dialog');
+  dialog.classList.add('story-ui-hidden');
   const art=scene('wake',images[1],zh?'夕阳沉入海面，小小旅人苏醒了。是时候离开家，沿着海岸寻找新的贝壳。':'As the sun sinks into the ocean, a little traveler awakens. It is time to leave home and search for new shells along the shore.');
   const next=button(zh?'下一页':'Next',bird);next.disabled=true;
-  if(!reduced){for(const [i,ms] of [[2,1200],[3,800],[4,800]]){await delay(ms);if(overlay.dataset.story!=='wake')return;art.replaceChildren(images[i])}}else art.replaceChildren(images[4]);
-  next.disabled=false;
+  dialog.getBoundingClientRect();dialog.classList.remove('story-fade-out');
+  await delay(fadeMs+holdMs);
+  if(!reduced){for(const [i,ms] of [[2,800],[3,800],[4,400]]){if(overlay.dataset.story!=='wake')return;art.replaceChildren(images[i]);await delay(ms)}}else art.replaceChildren(images[4]);
+  dialog.classList.remove('story-ui-hidden');
+  await delay(fadeMs);next.disabled=false;
  }
  const placeholder=document.createElement('div');
  const art=scene('loading',placeholder,zh?'加载中':'Loading');

@@ -464,3 +464,13 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #overlay.story-intro[data-story=loading] .story-shell-reveal{animation:storyShellFill 2.7s linear both}
 @keyframes storyShellFill{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
 @media(prefers-reduced-motion:reduce){#overlay.story-intro[data-story=loading] .story-shell-reveal{animation:none;clip-path:none}}
+
+/* Cinematic prologue: crisp painted frames, soft scene and typography transitions. */
+#overlay.story-intro .dialog{opacity:1;transition:opacity .65s ease}
+#overlay.story-intro .dialog.story-fade-out{opacity:0}
+#overlay.story-intro .story-caption,#overlay.story-intro #dialogButtons{transition:opacity .65s ease}
+#overlay.story-intro .story-ui-hidden .story-caption,#overlay.story-intro .story-ui-hidden #dialogButtons{opacity:0;pointer-events:none}
+#overlay.story-intro:not([data-story=loading]) .story-caption{top:61%;color:#C65E58}
+#overlay.story-intro:not([data-story=loading]) #dialogButtons{top:77%}
+#overlay.story-intro:not([data-story=loading]) #dialogButtons button{color:#C65E58;border-color:#C65E58}
+@media(prefers-reduced-motion:reduce){#overlay.story-intro .dialog,#overlay.story-intro .story-caption,#overlay.story-intro #dialogButtons{transition:none!important}}
