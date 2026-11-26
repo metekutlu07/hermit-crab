@@ -23,7 +23,7 @@ const water=[
 ];
 const heights=[938,938,847,847,847,847,847,847,847,847,705];
 // Scene-specific wind: still passages alternate with currents of airborne life.
-const density=[.85,.28,.64,.16,.90,1,0,.55,.38,.92,.70];
+const density=[0,.28,.64,.16,.90,1,0,.55,.38,.92,.70];
 const wind=[1,1,-1,1,1,-1,1,-1,1,1,-1];
 const atlas=new Image();atlas.src='assets/golden-blob-pollen.png?v=1';
 const cell=160;
@@ -108,6 +108,8 @@ function emit(m,W,H,seeded=false){
 function tick(m,W,H,t,cam){
  if(mode==='off'||reduced||!ready()||!W||!H)return;
  const p=pollen,d=density[m]||0;
+ // The opening scene is a quiet, pollen-free sanctuary, including when backtracking.
+ if(m===0){pollenReset();return;}
  const reset=p.t===null||t<p.t||t-p.t>1||Math.abs(W-p.w)>2||Math.abs(H-p.h)>2||Math.abs(cam-p.cam)>H*1.5;
  if(reset){p.items=[];p.t=t;p.cam=cam;p.w=W;p.h=H;p.next=t+.85;if(d){for(let i=0;i<4;i++)emit(m,W,H,true)}}
  const dt=Math.min(.055,Math.max(0,t-p.t)),dc=cam-p.cam;p.t=t;p.cam=cam;
