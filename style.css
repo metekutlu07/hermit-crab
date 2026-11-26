@@ -417,3 +417,16 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
  #overlay.chapter-complete button{width:100%;min-height:38px}
 }
 @media(prefers-reduced-motion:reduce){#overlay.chapter-complete.visible{animation:none}}
+
+/* Mobile completion: large individual specimens, names below, natural page scrolling. */
+@media(orientation:portrait){
+ #overlay.chapter-complete{overflow:hidden;align-items:stretch}
+ #overlay.chapter-complete .dialog{height:100%;min-height:0;max-height:100%;display:block;overflow-y:auto;overflow-x:hidden;touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding-top:max(32px,env(safe-area-inset-top));padding-bottom:max(32px,env(safe-area-inset-bottom))}
+ #overlay.chapter-complete .completion-shells{width:min(100%,340px);gap:25px;margin:28px auto 34px}
+ #overlay.chapter-complete .completion-shell{flex-direction:column;justify-content:center;gap:9px;padding:0}
+ #overlay.chapter-complete .completion-art{width:clamp(174px,55vw,252px);flex:none}
+ #overlay.chapter-complete .completion-art img{max-width:none;max-height:none}
+ #overlay.chapter-complete .completion-label{text-align:center;flex:none}
+ #overlay.chapter-complete .completion-name{font-size:clamp(19px,5vw,24px)}
+ #overlay.chapter-complete #dialogButtons{margin:0 auto;flex-shrink:0}
+}
