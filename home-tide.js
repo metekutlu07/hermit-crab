@@ -5,7 +5,7 @@
  if(!home||!art||!crab)return;
  const portrait=matchMedia('(orientation: portrait)'),reduce=matchMedia('(prefers-reduced-motion: reduce)');
  const names=['frame_01_original','frame_02','frame_03','frame_04','frame_05','frame_06'];
- const extensions=['png','jpeg','jpg','webp','PNG','JPEG','JPG','WEBP'];
+ const extensions=['jpg','jpeg','png','webp','JPG','JPEG','PNG','WEBP'];
  const frameMs=1200;
  let loading=false,frames=null,layer=null,start=null,last=-1;
  async function loadFrame(name){
