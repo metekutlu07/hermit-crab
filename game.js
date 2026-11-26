@@ -202,7 +202,7 @@ const testModule=Number(new URLSearchParams(location.search).get('testModule'))|
 let newGolden=false,newReady=false,terrainDebug=false,loadedCount=0;
 const defaults=window.GOLDEN_TERRAIN;
 let terrain=defaults;
-try{const v=JSON.parse(localStorage.getItem('goldenTerrainV5')||'null');if(Array.isArray(v)&&v.length===defaults.length)terrain=v.map((m,i)=>({...defaults[i],ground:m.ground,platforms:m.platforms,walls:m.walls||defaults[i].walls,hazards:m.hazards||defaults[i].hazards}));}catch{}
+try{const v=JSON.parse(localStorage.getItem('goldenTerrainV6')||'null');if(Array.isArray(v)&&v.length===defaults.length)terrain=v.map((m,i)=>({...defaults[i],ground:m.ground,platforms:m.platforms,walls:m.walls||defaults[i].walls,hazards:m.hazards||defaults[i].hazards}));}catch{}
 const newWidths=defaults.map(m=>MH*m.width/m.height),newModule=defaults.map(()=>false);
 function loadPainting(name){return new Promise(resolve=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src=assetURL(name)})}
 async function choosePainting(primary,fallback){return (await loadPainting(primary))||(fallback?await loadPainting(fallback):null)}
