@@ -384,9 +384,9 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 @media(orientation:portrait){#home .home-art.clean-home #soundHome{inset:auto;top:max(10px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));left:auto;bottom:auto}}
 
 /* Chapter I completion: full-page illustrated field, simple graphic typography. */
-#overlay.chapter-complete{background:#f3d9ac url('assets/home-landscape-empty.jpeg') center/cover no-repeat;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;overflow:auto;overscroll-behavior:contain;align-items:stretch;justify-content:center}
+#overlay.chapter-complete{background:#fce6cc;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;overflow:auto;overscroll-behavior:contain;align-items:stretch;justify-content:center}
 #overlay.chapter-complete.visible{display:flex;animation:chapter-fade .5s ease both}
-#overlay.chapter-complete .dialog{box-sizing:border-box;position:relative;width:100%;max-width:none;max-height:none;min-height:100%;margin:0;padding:max(24px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left));border:0;border-radius:0;box-shadow:none;background:rgba(255,239,211,.55);color:#784447;text-align:center;font-family:var(--graphic-font);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;overflow:auto}
+#overlay.chapter-complete .dialog{box-sizing:border-box;position:relative;width:100%;max-width:none;max-height:none;min-height:100%;margin:0;padding:max(24px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left));border:0;border-radius:0;box-shadow:none;background:transparent;color:#784447;text-align:center;font-family:var(--graphic-font);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;overflow:auto}
 #overlay.chapter-complete .completion-kicker{font:500 11px/1.3 var(--graphic-font);letter-spacing:.15em;color:#784447;margin:0 0 9px}
 #overlay.chapter-complete h2{font:400 clamp(30px,5vw,62px)/1.1 var(--graphic-font);color:#A64B49;letter-spacing:-.035em;margin:0 0 13px;text-shadow:none}
 #overlay.chapter-complete #dialogBody{width:min(100%,1080px)}
@@ -405,8 +405,8 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #overlay.chapter-complete button:focus-visible{outline-color:#A64B49}
 #overlay.chapter-complete button:active{background:rgba(166,75,73,.1)}
 @media(orientation:portrait){
- #overlay.chapter-complete{background-image:url('assets/home-portrait-empty.jpeg')}
- #overlay.chapter-complete .dialog{background:rgba(255,239,211,.72);padding-top:max(22px,env(safe-area-inset-top));padding-bottom:max(18px,env(safe-area-inset-bottom));justify-content:safe center}
+ 
+ #overlay.chapter-complete .dialog{background:transparent;padding-top:max(22px,env(safe-area-inset-top));padding-bottom:max(18px,env(safe-area-inset-bottom));justify-content:safe center}
  #overlay.chapter-complete h2{font-size:clamp(31px,8vw,43px);margin-bottom:10px}
  #overlay.chapter-complete .completion-shells{grid-template-columns:1fr;width:min(100%,305px);gap:3px;margin:15px auto 16px}
  #overlay.chapter-complete .completion-shell{flex-direction:row;justify-content:flex-start;gap:16px;min-height:0;padding:1px 8px}
@@ -430,3 +430,7 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
  #overlay.chapter-complete .completion-name{font-size:clamp(19px,5vw,24px)}
  #overlay.chapter-complete #dialogButtons{margin:0 auto;flex-shrink:0}
 }
+
+/* Quiet watercolor paper sampled from the shell reference; seamless, no decorative objects. */
+#overlay.chapter-complete{background:#fce6cc url("data:image/webp;base64,UklGRgAEAABXRUJQVlA4IPQDAADwIQCdASogASABPpFIm0ylpCMioCnAsBIJaW6W/+3z52XtznZf1l7Nbn1//4H7pZf/T/3HFlwl8dB14xgff/r19/09YAoNRdn1CXmwWLhhGugHZoQTNMM7XH80iVSerRI1YmFWG98K4mu9MPnjOx2JLomrQ2LmuipyVYGWJRY0pB1ippjZC9nJV3AZA/sM4ZpvUSr1CroCX0Cam76B/dLyylXZkV20UR6KNeMPfZpa7/IPQcVz9+3hCABP8ucCC7Em9IDzKPyXfTUEuos8mXIzoJV0sR9xhP+528GuYNhTemoUO0ZQrulQatBbirH5LdYPmfJBdB8fjeWzV6+avJo0ghfBrIynl43ME0RGiTUlKJaPYhdhnSoAAP71Fbz3j9cd9t08n8CRbJiHqHwR/FDYHT4ny57H0n5SrzAdyCe4O/MwbWzDpzUGgsO4h+p1JGbccMIYOUrb2GzO7OXjtZJugh6hy9HFO1f6+1by4ysaOrw9Y07T4CqhZg6HQ+5l6ndMQvCywv9Y7vzBZ0m/4ryK8T5AiHfUcwu7xK4zc/kp1ODK4m6sF16VhGXgd1ORXYv/T7+7scVj5CB6z69dhy2s+4UuCIAYnQKAmnBZmQYc4hNYQlrJ3jrf8B0SXUTwo2bFbkpaZKdUOPApO4RRoMsDPeI0QzFwruk59awiaOaZhwsu4FdQBhdBldK6p+rL3dEy3OiuXFXwbtpgEQDuT/Q262sCQ3p5kAauSYU4/kpQTIdREGAedEJ6ULcuO8TvwqwLA2uUpR0r5B2cCd6LZcY8mxc6DOig9oG3crVzhm7E0y95VCD2xO58R4KfkeRlhzq29n+YLY4Q+3Inr6QCX45SzSbIsxJyr4UFzMUuRoBwBblMywCZhBXPhNqL6yYlHkpErGiDDzi/35qAQ201cI26hKUcVHGaSyGcN1ZUHlkN77d3GO0PmUV70wS/yO1XS8xZZIQI/AfgR3+sbW9cSggFZPZXtgo91wBWE/tTt/9e8Wt63SMjM26RKHPvIeGfhFLWSM05mqD3gvtL0nPcpTi64xgwB91lsYDDpfPfdG/fnLXs+KtLmaZ9qhcmmK2p1oHSNcR28TMkhDV8WOVx3L9UgbKqbvyaFAWcg0PXvfnfJldy4QpWrvYh90SDn8zFIfZDD64K4fwvJ/2koItMxebGfl6Weeb77hzaNAju7mNlwJGA5WO+dKEFSaeiMpDhBo//tom9MG0EOgrvRAelcY01a8erOjNKFOoyDrmZCrnuzDIV7h3eQXSvg/gZeyW1ZTRjljjZ9DOGuEZLJFTSUCFfk5rMu4YP1m1hwH7PT7TIViOro+1c4RQ2KmUHAzIeodv3AAAA") repeat 0 0 / 288px 288px}
+#overlay.chapter-complete .dialog{background:transparent}
