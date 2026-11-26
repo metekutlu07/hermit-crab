@@ -25,7 +25,7 @@ const heights=[938,938,847,847,847,847,847,847,847,847,705];
 // Scene-specific wind: still passages alternate with currents of airborne life.
 const density=[.85,.28,.64,.16,.90,1,0,.55,.38,.92,.70];
 const wind=[1,1,-1,1,1,-1,1,-1,1,1,-1];
-const atlas=new Image();atlas.src='assets/golden-individual-spores.png?v=1';
+const atlas=new Image();atlas.src='assets/golden-berry-spores.png?v=1';
 const cell=192;
 const ready=()=>atlas.complete&&atlas.naturalWidth===768&&atlas.naturalHeight===384;
 const birdScenes=new Set([0,1,3,5,8,10]);
@@ -76,9 +76,9 @@ function floatSpores(ctx,m,t){
 // Individual pollen: screen-crossing wind currents, with independent soft motion.
 const pollen={items:[],t:null,cam:0,w:0,h:0,next:0,serial:0};
 const layers=[
- {size:[.010,.023],speed:[.022,.040],opacity:[.34,.55],parallax:.09},
- {size:[.024,.055],speed:[.038,.072],opacity:[.48,.80],parallax:.20},
- {size:[.060,.093],speed:[.055,.090],opacity:[.38,.62],parallax:.35}
+ {size:[.014,.030],speed:[.022,.040],parallax:.09},
+ {size:[.031,.063],speed:[.038,.072],parallax:.20},
+ {size:[.064,.100],speed:[.055,.090],parallax:.35}
 ];
 const between=(a,b,r)=>a+(b-a)*r;
 function emit(m,W,H,seeded=false){
@@ -94,12 +94,12 @@ function emit(m,W,H,seeded=false){
  for(let k=0;k<count;k++){
   const n=seed+k*73,q=i=>rand(n+i*17);
   const size=H*between(...L.size,q(1));
-  const art=q(2)<.08?3:[0,1,2,4,5,6,7][Math.floor(q(3)*7)];
+  const form=q(2)<.52?0:q(2)<.81?1:2;const art=(q(3)<.56?0:3)+form;
   pollen.items.push({layer,art,size,x:cx+k*H*.035+H*(q(4)-.5)*.045,y:cy+H*(q(5)-.5)*.13,
    age:seeded?1.7:q(6)*.45,life:Math.max(22,(W+H*.4)/common*1.8),
    vx:common*between(.79,1.23,q(7)),vy:H*between(-.013,.011,q(8)),
    phase:q(9)*Math.PI*2,phi,rate:between(.38,.86,q(10)),rotation:q(11)*Math.PI*2,
-   spin:between(.10,.29,q(12))*(q(13)<.5?-1:1),alpha:between(...L.opacity,q(14))});
+   spin:between(.16,.36,q(12))*(q(13)<.5?-1:1)});
  }
 }
 function tick(m,W,H,t,cam){
@@ -120,20 +120,19 @@ function tick(m,W,H,t,cam){
   const flutter=Math.sin(q.age*q.rate+q.phase);
   q.x-=q.vx*windPulse*gust*dt+dc*layers[q.layer].parallax;
   q.x+=H*.018*Math.sin(q.age*1.15+q.phase)*dt;
-  q.y+=(q.vy+H*(.030*flutter+.012*Math.sin(q.age*1.6+q.phase*.7)))*dt;
+  q.y+=(q.vy+H*(.044*flutter+.014*Math.sin(q.age*1.6+q.phase*.7)))*dt;
   // Gentle boundary steering, never a sudden bounce or wrap.
   if(q.y<H*.10)q.y+=H*.055*dt;if(q.y>H*.82)q.y-=H*.055*dt;
   q.rotation+=(q.spin+.12*Math.sin(q.age*.8+q.phase))*dt;
  }
- p.items=p.items.filter(q=>q.age<q.life&&q.x> -q.size*1.3&&q.x<W+H*.45);
+ p.items=p.items.filter(q=>q.x> -q.size*1.3&&q.x<W+H*.45);
 }
 function drawPollen(ctx,front,W,H){
  if(mode==='off'||reduced||!ready())return;
  for(const q of pollen.items){
   if((q.layer===2)!==front||q.x+q.size<0||q.x-q.size>W)continue;
-  const a=smooth(q.age/1.6)*smooth((q.life-q.age)/3)*smooth((q.x+q.size)/Math.max(q.size,1));
-  const size=q.size*(1+.045*Math.sin(q.age*.9+q.phase));
-  ctx.save();ctx.globalAlpha=Math.min(.88,q.alpha*a*intensity);ctx.translate(q.x,q.y);ctx.rotate(q.rotation+.12*Math.sin(q.age*1.2+q.phase));
+  const size=q.size;
+  ctx.save();ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.translate(q.x,q.y);ctx.rotate(q.rotation+.12*Math.sin(q.age*1.2+q.phase));
   ctx.drawImage(atlas,q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
  }
 }
