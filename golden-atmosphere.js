@@ -45,81 +45,75 @@ function shimmer(ctx,a,t,warm){
   const pulse=Math.pow(.5+.5*Math.sin(phase),1.6);
   if(pulse<.05)continue;
   const x=g.x+Math.sin(phase*.5)*g.drift,y=g.y+Math.sin(phase)*.8,l=g.length*(.8+pulse*.2);
-  ctx.globalAlpha=Math.min(.38,(warm?.29:.23)*pulse*Math.min(intensity,1.15));
+  ctx.globalAlpha=Math.min(.66,(warm?.55:.46)*pulse*Math.min(intensity,1.15));
   const grad=ctx.createLinearGradient(x-l/2,y,x+l/2,y);const color=warm?'255,221,157':'232,240,235';
   grad.addColorStop(0,'rgba('+color+',0)');grad.addColorStop(.5,'rgba('+color+',1)');grad.addColorStop(1,'rgba('+color+',0)');
-  ctx.strokeStyle=grad;ctx.lineWidth=.9+pulse*.65;ctx.lineCap='round';
+  ctx.strokeStyle=grad;ctx.lineWidth=1.2+pulse*1.35;ctx.lineCap='round';
   ctx.beginPath();ctx.moveTo(x-l/2,y+.3);ctx.quadraticCurveTo(x,y-1,x+l/2,y);ctx.stroke();
  }
  ctx.restore();
 }
-// Opening sunset: illuminate existing painted pigment rather than adding a glowing disc.
-// Localized masks are extracted once from the actual painting at its native coordinates.
+// Masks are derived from the actual 1536 × 938 opening painting.
+// The sun is at (478,374); its reflection extends from y=416 down to y=583.
+// Paint-compatible contrast changes, not a screen-blend glow on nearly white pixels.
 let sunsetMasks=null;
+function inRegion(x,y,poly){
+ let inside=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const [a,b]=poly[i],[c,d]=poly[j];if((b>y)!==(d>y)&&x<(c-a)*(y-b)/(d-b)+a)inside=!inside}return inside;
+}
+const reflectionRegion=[[407,416],[552,416],[609,463],[646,497],[650,535],[617,567],[574,583],[484,578],[470,515],[443,495],[414,469],[398,451]];
 function buildSunsetMasks(im){
  if(sunsetMasks&&sunsetMasks.im===im)return sunsetMasks;
  if(typeof document==='undefined'||!im?.naturalWidth)return null;
  try{
-  const source=document.createElement('canvas');source.width=1536;source.height=938;
-  const sc=source.getContext('2d',{willReadFrequently:true});sc.drawImage(im,0,0,1536,938);
+  const source=document.createElement('canvas');source.width=1536;source.height=938;const sc=source.getContext('2d',{willReadFrequently:true});sc.drawImage(im,0,0,1536,938);
   const px=sc.getImageData(0,0,1536,938).data;
-  function makeMask(x,y,w,h,kind){
-   const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');const out=ctx.createImageData(w,h),d=out.data;
+  function make(x,y,w,h,kind,bright){
+   const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d'),out=ctx.createImageData(w,h),d=out.data;
    for(let j=0;j<h;j++)for(let i=0;i<w;i++){
-    const X=x+i,Y=y+j,at=(Y*1536+X)*4,k=(j*w+i)*4;
-    const r=px[at],g=px[at+1],b=px[at+2];
-    // Warm gold/peach pigment only; dark purple contours and cool sea are excluded.
-    const warm=smooth((r-b-12)/54)*smooth((g-b+4)/40)*smooth((r-145)/80);
-    let weight=0;
+    const X=x+i,Y=y+j,k=(j*w+i)*4,at=(Y*1536+X)*4,r=px[at],g=px[at+1],b=px[at+2];
+    const warm=smooth((r-b-12)/55)*smooth((g-b+3)/40)*smooth((r-133)/85);
+    let weight;
     if(kind==='sun'){
-     // Approximate solar centre from the supplied mobile screenshot.
-     const rho=Math.hypot((X-474)/130,(Y-371)/112);
-     const falloff=smooth(1-rho);
-     // Avoid the large foreground tree on the left of the opening.
-     weight=falloff*smooth((X-395)/55)*warm;
+     const radius=Math.hypot((X-478)/152,(Y-374)/125);
+     weight=smooth(1-radius)*smooth((X-397)/28)*warm;
     }else{
-     // Existing horizontal golden reflections beneath the sun, not the sandy path.
-     const gold=warm*smooth((g-95)/65);
-     const edge=smooth((X-x)/18)*smooth((x+w-X)/24)*smooth((Y-y)/8)*smooth((y+h-Y)/10);
-     weight=gold*edge;
+     const gold=warm*smooth((g-112)/65);
+     weight=inRegion(X,Y,reflectionRegion)?gold*smooth((Y-415)/5)*smooth((583-Y)/10):0;
     }
-    d[k]=255;d[k+1]=kind==='sun'?217:232;d[k+2]=kind==='sun'?174:173;d[k+3]=Math.round(weight*255);
+    const delta=kind==='sun'?(bright?[32,42,35]:[-17,-24,-25]):(bright?[32,51,58]:[-39,-43,-23]);
+    d[k]=r+delta[0];d[k+1]=g+delta[1];d[k+2]=b+delta[2];d[k+3]=Math.round(weight*255);
    }
-   ctx.putImageData(out,0,0);return{c,x,y,w,h};
+   ctx.putImageData(out,0,0);return {c,x,y,w,h};
   }
-  sunsetMasks={im,sun:makeMask(385,255,250,170,'sun'),sea:makeMask(390,416,405,104,'sea')};
+  sunsetMasks={im,sunLight:make(397,250,235,166,'sun',true),sunShade:make(397,250,235,166,'sun',false),waterLight:make(390,416,270,168,'water',true),waterShade:make(390,416,270,168,'water',false)};
   return sunsetMasks;
  }catch(e){return null}
 }
 function openingSunset(ctx,im,t){
  const masks=buildSunsetMasks(im);if(!masks)return;
- ctx.save();ctx.globalCompositeOperation='screen';
- const sun=masks.sun;
- // Small amplitude and two slow, non-synchronized cycles avoid a mechanical pulse.
- const breathe=.5+.32*Math.sin(t*.31)+.18*Math.sin(t*.113+1.6);
- ctx.globalAlpha=.09+.30*breathe;
- ctx.drawImage(sun.c,sun.x,sun.y);
- const sea=masks.sea;
- // Travel along existing golden brushstrokes. Multiple staggered horizontal bands.
- for(let y=0;y<sea.h;y+=2){
-  const f=y/sea.h,phase=t*(.80+f*.24)-y*.21;
-  const glint=Math.pow(.5+.5*Math.sin(phase+.50*Math.sin(t*.23+y*.07)),2);
-  const shimmer=.5+.5*Math.sin(t*.47+y*.13+1.3);
-  ctx.globalAlpha=.12+.55*glint*(.55+.45*shimmer);
-  const dy=Math.min(2,sea.h-y);
-  ctx.drawImage(sea.c,0,y,sea.w,dy,sea.x,sea.y+y,sea.w,dy);
+ ctx.save();ctx.globalCompositeOperation='source-over';
+ const breath=.72*Math.sin(t*.63)+.28*Math.sin(t*.24+1.1);
+ const solar=breath>=0?masks.sunLight:masks.sunShade;
+ ctx.globalAlpha=.18+.76*Math.abs(breath);ctx.drawImage(solar.c,solar.x,solar.y);
+ const sea=masks.waterLight;
+ for(let y=0;y<sea.h;y+=3){
+  const f=y/sea.h,phase=t*(1.35+f*.55)-y*.16;
+  const wave=.72*Math.sin(phase)+.28*Math.sin(t*.79+y*.085);
+  const src=wave>=0?masks.waterLight:masks.waterShade;
+  ctx.globalAlpha=.15+.82*Math.abs(wave);
+  const dy=Math.min(3,sea.h-y);ctx.drawImage(src.c,0,y,sea.w,dy,sea.x,sea.y+y,sea.w,dy);
  }
  ctx.restore();
 }
-// A visible layer of golden strokes in the ocean beneath the sun.
+// Visible but painterly moving highlights, positioned on the original ocean strokes.
 function sunsetWaterGlints(ctx,t){
- ctx.save();clip(ctx,[[393,422],[516,422],[538,432],[538,488],[468,488],[444,470],[420,453]]);
- const rows=[{x:475,y:427,l:58},{x:479,y:436,l:62},{x:460,y:446,l:51},{x:492,y:456,l:68},{x:486,y:470,l:55},{x:509,y:480,l:36}];
+ ctx.save();clip(ctx,reflectionRegion);
+ const rows=[{x:475,y:423,l:61},{x:482,y:434,l:70},{x:475,y:448,l:91},{x:470,y:463,l:104},{x:481,y:481,l:125},{x:491,y:498,l:125},{x:530,y:536,l:99},{x:529,y:565,l:78}];
  for(let i=0;i<rows.length;i++){
-  const g=rows[i],phase=t*(1.05+i*.09)+i*1.63,p=.5+.5*Math.sin(phase);
-  const x=g.x+7*Math.sin(t*.61+i*2.1),y=g.y+1.15*Math.sin(phase*.67),l=g.l*(.5+.5*p);
-  const grad=ctx.createLinearGradient(x-l/2,y,x+l/2,y);grad.addColorStop(0,'rgba(255,238,182,0)');grad.addColorStop(.45,'rgba(255,245,201,1)');grad.addColorStop(1,'rgba(255,238,182,0)');
-  ctx.globalAlpha=.18+.57*p*p;ctx.strokeStyle=grad;ctx.lineWidth=1.2+1.5*p;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x-l/2,y);ctx.quadraticCurveTo(x,y-.8,x+l/2,y+.3);ctx.stroke();
+  const g=rows[i],phase=t*(1.28+i*.07)+i*1.53,p=.5+.5*Math.sin(phase);
+  const x=g.x+12*Math.sin(t*.83+i*2.1),y=g.y+1.6*Math.sin(phase*.67),l=g.l*(.32+.68*p);
+  const grad=ctx.createLinearGradient(x-l/2,y,x+l/2,y);grad.addColorStop(0,'rgba(255,239,190,0)');grad.addColorStop(.24,'rgba(255,244,204,.7)');grad.addColorStop(.5,'rgba(255,250,218,1)');grad.addColorStop(.78,'rgba(255,239,190,.5)');grad.addColorStop(1,'rgba(255,239,190,0)');
+  ctx.globalAlpha=.13+.76*p*p;ctx.strokeStyle=grad;ctx.lineWidth=1.6+2.4*p;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x-l/2,y);ctx.quadraticCurveTo(x,y-1.1,x+l/2,y+.4);ctx.stroke();
  }
  ctx.restore();
 }
@@ -139,7 +133,7 @@ function floatSpores(ctx,m,t){
   const seed=m*809+k*13+3,period=12+rand(seed)*14,phase=(t/period+rand(seed+1))%1;
   const fade=smooth(phase*6)*smooth((1-phase)*6);
   const px=((rand(seed+2)*1536+dir*t*(7+rand(seed+3)*9)+Math.sin(t*.36+seed)*16)%1536+1536)%1536;
-  const py=H*(.10+rand(seed+4)*.47)+Math.sin(t*.24+seed)*17-phase*18;
+  const py=H*(.10+rand(seed+4)*.36)+Math.sin(t*.24+seed)*17-phase*18;
   ctx.globalAlpha=Math.min(.72,fade*gust*(.35+rand(seed+5)*.32)*intensity);
   ctx.fillStyle=['#F5CFD9','#D8D2F4','#F1C5DD','#CFC0E7'][k%4];
   ctx.beginPath();const size=1.0+rand(seed+6)*1.6;ctx.ellipse(px,py,size,size*.82,0,0,Math.PI*2);ctx.fill();
@@ -151,7 +145,7 @@ const pollen={items:[],t:null,cam:0,w:0,h:0,next:0,serial:0};
 const layers=[
  {size:[.024,.036],speed:[.022,.040],parallax:.09},
  {size:[.031,.063],speed:[.038,.072],parallax:.20},
- {size:[.064,.100],speed:[.055,.090],parallax:.35}
+ {size:[.064,.077],speed:[.055,.090],parallax:.35}
 ];
 const between=(a,b,r)=>a+(b-a)*r;
 function emit(m,W,H,seeded=false,seam=-Infinity,seedX=null){
@@ -162,7 +156,7 @@ function emit(m,W,H,seeded=false,seam=-Infinity,seedX=null){
  const r=i=>rand(seed+i*11);
  const layer=r(1)<.35?0:r(1)<.78?1:2;
  const count=Math.min(free,seedX!==null?1:r(2)<.84?1:2);
- const L=layers[layer],cy=H*between(.13,.54,r(4)),cx=seedX!==null?seedX:seeded?Math.max(seam+H*.12,W*between(.25,.95,r(5))):Math.max(W+H*.10,seam+H*.12);
+ const L=layers[layer],cy=H*between(.12,.41,r(4)),cx=seedX!==null?seedX:seeded?Math.max(seam+H*.12,W*between(.25,.95,r(5))):Math.max(W+H*.10,seam+H*.12);
  const common=between(...L.speed,r(6))*H,phi=r(7)*Math.PI*2, family=Math.floor(r(8)*pollenFamilies.length);
  for(let k=0;k<count;k++){
   const n=seed+k*73,q=i=>rand(n+i*17);
@@ -197,7 +191,7 @@ function tick(m,W,H,t,cam,seam=-Infinity){
   const flutter=Math.sin(q.age*q.rate+q.phase);
   q.x-=q.vx*windPulse*gust*dt+dc*(m===0?1:layers[q.layer].parallax);
   q.x+=H*.018*Math.sin(q.age*1.15+q.phase)*dt;
-  const low=H*.07+q.size*.72,high=H*2/3-q.size*.72;
+  const low=H*.07+q.size*.72,high=H*.5-q.size*.72;
   let vy=q.vy+H*(.034*flutter+.014*Math.sin(q.age*1.3+q.phase*.7));
   const margin=H*.09;if(vy>0)vy*=smooth((high-q.y)/margin);else vy*=smooth((q.y-low)/margin);
   q.y=Math.max(low,Math.min(high,q.y+vy*dt));

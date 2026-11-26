@@ -261,6 +261,12 @@ async function resume(){primeAudio();const s=safeGet();if(!s){begin();return}awa
 function shellGlyph(kind){const glyphs={golden:'<path d="M12 20C7 20 3 16 3 11a9 9 0 0 1 18 0c0 5-4 9-9 9zM12 15a4 4 0 1 0-4-4c0 3 3 5 6 4"/>',spring:'<path d="M5 19h14L12 3 5 19zM8 12h8m-6-5h4m-7 9h10"/>',heavy:'<path d="M4 15 7 6l7-3 7 7-3 10H8zM7 6l7 7 4 7m-4-7 7-3M4 15l10-2"/>',float:'<ellipse cx="12" cy="12" rx="8" ry="10" transform="rotate(30 12 12)"/><path d="M8 14c-1-3 1-6 4-7"/>'};return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'+glyphs[kind]+'</svg>'}
 function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=tr(C.title);$('chapterName').textContent=tr(C.name);const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('statusLeft').setAttribute('aria-label',state.health+' of 3 lives');$('hearts').textContent=state.health;const slots=$('shellSlots');slots.innerHTML='';slots.hidden=state.available.length<=1;for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;b.setAttribute('aria-pressed',String(state.shell===kind));b.innerHTML=shellGlyph(kind);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
 function equip(kind){if(!state.available.includes(kind))return;state.shell=kind;tone(510);updateHud();save();note(`${SHELLS[kind].name} Shell · ${SHELLS[kind].ability}`,1800)}
+function collectionMessage(name){
+ if(gameLanguage==='zh')return '已收集：'+translatedText(name);
+ const common=['Scallop','Cowrie','Cockle','Limpet','Moon Snail','Murex','Abalone','Nautilus','Paper Nautilus','Moon Abalone'];
+ const noun=name.toLowerCase()+(common.includes(name)?' shell':'');
+ return (/^[aeiou]/i.test(noun)?'An ':'A ')+noun+' collected.';
+}
 function note(txt,ms=2300){const el=$('message');el.textContent=translatedText(txt);el.classList.add('show');clearTimeout(state.messages);state.messages=setTimeout(()=>el.classList.remove('show'),ms)}
 function unlock(kind){if(state.available.includes(kind))return;state.available.push(kind);equip(kind);tone(830);note(`Discovered ${SHELLS[kind].name} Shell! ${SHELLS[kind].ability}`,4000);save()}
 function syncHeld(){
@@ -365,7 +371,7 @@ function progress(dt){if(state.mode!=='game'||state.paused)return;const C=CHAPTE
   const near=item.raised
    ? Math.abs(item.x-state.x)<82&&state.y<=item.surfaceY+18&&state.y>=item.surfaceY-145
    : Math.abs(item.x-state.x)<64&&Math.abs(item.y-state.y)<110;
-  if(!item.got&&near){item.got=true;state.collections[item.id]=true;tone(880);note(`Encyclopedia specimen: ${item.name}`,2200);updateHud();save()}
+  if(!item.got&&near){item.got=true;state.collections[item.id]=true;tone(880);note(collectionMessage(item.name),2200);updateHud();save()}
  }
  if(state.x>=chapterWidth(state.chapter)-110){if(newGolden&&state.chapter===0&&(loadedCount<defaults.length||testModule)){state.x=chapterWidth(0)-110;state.vx=0;if(!state.waitingForModule){state.waitingForModule=true;note(testModule?'End of terrain test':'The journey continues soon · Module '+String(loadedCount+1).padStart(2,'0'),3000)}}else finishChapter()}else state.waitingForModule=false;
  updateBird(dt);state.invincible=Math.max(0,state.invincible-dt);state.anim+=dt;
