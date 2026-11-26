@@ -79,7 +79,7 @@ function floatSpores(ctx,m,t){
 // Individual pollen: screen-crossing wind currents, with independent soft motion.
 const pollen={items:[],t:null,cam:0,w:0,h:0,next:0,serial:0};
 const layers=[
- {size:[.007,.015],speed:[.022,.040],parallax:.09},
+ {size:[.012,.018],speed:[.022,.040],parallax:.09},
  {size:[.0155,.0315],speed:[.038,.072],parallax:.20},
  {size:[.032,.050],speed:[.055,.090],parallax:.35}
 ];
@@ -96,7 +96,7 @@ function emit(m,W,H,seeded=false){
  const common=between(...L.speed,r(6))*H,phi=r(7)*Math.PI*2, family=Math.floor(r(8)*pollenFamilies.length);
  for(let k=0;k<count;k++){
   const n=seed+k*73,q=i=>rand(n+i*17);
-  const size=H*between(...L.size,q(1))*(layer===2?1:k===0?1:k===1?.68:.48);
+  const size=H*Math.max(.012,between(...L.size,q(1))*(layer===2?1:k===0?1:k===1?.68:.48));
   const choices=pollenFamilies[family],art=choices[Math.floor(q(3)*choices.length)];
   pollen.items.push({layer,art,family,size,x:cx+k*H*.037+H*(q(4)-.5)*.025,y:cy+H*(q(5)-.5)*.09,
    age:seeded?1.7:q(6)*.45,life:Math.max(22,(W+H*.4)/common*1.8),
@@ -134,7 +134,7 @@ function tick(m,W,H,t,cam){
 function drawPollen(ctx,front,W,H){
  if(mode==='off'||reduced||!ready())return;
  for(const q of pollen.items.slice().sort((a,b)=>a.size-b.size)){
-  if((q.size>H*.015)!==front||q.x+q.size<0||q.x-q.size>W)continue;
+  if((q.size>H*.018)!==front||q.x+q.size<0||q.x-q.size>W)continue;
   const size=q.size;
   ctx.save();ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.translate(q.x,q.y);ctx.rotate(q.rotation+q.rock*Math.sin(q.age*.64+q.phase)+.12*Math.sin(q.age*1.31+q.phi));
   ctx.drawImage(atlas,q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
