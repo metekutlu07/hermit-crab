@@ -28,8 +28,8 @@ const wind=[1,1,-1,1,1,-1,1,-1,1,1,-1];
 const atlas=new Image();atlas.src='assets/golden-blob-pollen.png?v=1';
 const cell=160;
 const ready=()=>atlas.complete&&atlas.naturalWidth===640&&atlas.naturalHeight===480;
-// Lavender, orange/coral and pink only; never select the green cells.
-const pollenFamilies=[[1,4,10],[0,5,8,11],[3,6]];
+// Purple and pink only, retaining original pigments.
+const pollenFamilies=[[1,4,10],[3,6]];
 const birdScenes=new Set([0,1,3,5,8,10]);
 const mistScenes=new Set([0,1,3,5,8]);
 const shimmerScenes=new Set([0,1,2,5,7,8,10]);
@@ -73,13 +73,13 @@ function buildSunsetMasks(im){
     let weight=0;
     if(kind==='sun'){
      // Approximate solar centre from the supplied mobile screenshot.
-     const rho=Math.hypot((X-502)/116,(Y-371)/103);
+     const rho=Math.hypot((X-474)/130,(Y-371)/112);
      const falloff=smooth(1-rho);
      // Avoid the large foreground tree on the left of the opening.
-     weight=falloff*smooth((X-412)/42)*warm;
+     weight=falloff*smooth((X-395)/55)*warm;
     }else{
      // Existing horizontal golden reflections beneath the sun, not the sandy path.
-     const gold=warm*smooth((g-126)/73);
+     const gold=warm*smooth((g-95)/65);
      const edge=smooth((X-x)/18)*smooth((x+w-X)/24)*smooth((Y-y)/8)*smooth((y+h-Y)/10);
      weight=gold*edge;
     }
@@ -87,7 +87,7 @@ function buildSunsetMasks(im){
    }
    ctx.putImageData(out,0,0);return{c,x,y,w,h};
   }
-  sunsetMasks={im,sun:makeMask(405,270,220,150,'sun'),sea:makeMask(420,424,375,74,'sea')};
+  sunsetMasks={im,sun:makeMask(385,255,250,170,'sun'),sea:makeMask(390,416,405,104,'sea')};
   return sunsetMasks;
  }catch(e){return null}
 }
@@ -97,7 +97,7 @@ function openingSunset(ctx,im,t){
  const sun=masks.sun;
  // Small amplitude and two slow, non-synchronized cycles avoid a mechanical pulse.
  const breathe=.5+.32*Math.sin(t*.31)+.18*Math.sin(t*.113+1.6);
- ctx.globalAlpha=.055+.095*breathe;
+ ctx.globalAlpha=.09+.30*breathe;
  ctx.drawImage(sun.c,sun.x,sun.y);
  const sea=masks.sea;
  // Travel along existing golden brushstrokes. Multiple staggered horizontal bands.
@@ -105,9 +105,21 @@ function openingSunset(ctx,im,t){
   const f=y/sea.h,phase=t*(.80+f*.24)-y*.21;
   const glint=Math.pow(.5+.5*Math.sin(phase+.50*Math.sin(t*.23+y*.07)),2);
   const shimmer=.5+.5*Math.sin(t*.47+y*.13+1.3);
-  ctx.globalAlpha=.055+.24*glint*(.48+.52*shimmer);
+  ctx.globalAlpha=.12+.55*glint*(.55+.45*shimmer);
   const dy=Math.min(2,sea.h-y);
   ctx.drawImage(sea.c,0,y,sea.w,dy,sea.x,sea.y+y,sea.w,dy);
+ }
+ ctx.restore();
+}
+// A visible layer of golden strokes in the ocean beneath the sun.
+function sunsetWaterGlints(ctx,t){
+ ctx.save();clip(ctx,[[393,422],[516,422],[538,432],[538,488],[468,488],[444,470],[420,453]]);
+ const rows=[{x:475,y:427,l:58},{x:479,y:436,l:62},{x:460,y:446,l:51},{x:492,y:456,l:68},{x:486,y:470,l:55},{x:509,y:480,l:36}];
+ for(let i=0;i<rows.length;i++){
+  const g=rows[i],phase=t*(1.05+i*.09)+i*1.63,p=.5+.5*Math.sin(phase);
+  const x=g.x+7*Math.sin(t*.61+i*2.1),y=g.y+1.15*Math.sin(phase*.67),l=g.l*(.5+.5*p);
+  const grad=ctx.createLinearGradient(x-l/2,y,x+l/2,y);grad.addColorStop(0,'rgba(255,238,182,0)');grad.addColorStop(.45,'rgba(255,245,201,1)');grad.addColorStop(1,'rgba(255,238,182,0)');
+  ctx.globalAlpha=.18+.57*p*p;ctx.strokeStyle=grad;ctx.lineWidth=1.2+1.5*p;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x-l/2,y);ctx.quadraticCurveTo(x,y-.8,x+l/2,y+.3);ctx.stroke();
  }
  ctx.restore();
 }
@@ -123,13 +135,13 @@ function floatSpores(ctx,m,t){
  const d=density[m];if(!d)return;
  const H=heights[m],dir=wind[m],gust=.32+.68*Math.pow(.5+.5*Math.sin(t*.19+m*1.7),2);
  // Tiny airborne motes, distributed through the atmosphere, with irregular gaps.
- for(let k=0;k<Math.round(38*d);k++){
+ for(let k=0;k<Math.round(19*d);k++){
   const seed=m*809+k*13+3,period=12+rand(seed)*14,phase=(t/period+rand(seed+1))%1;
   const fade=smooth(phase*6)*smooth((1-phase)*6);
   const px=((rand(seed+2)*1536+dir*t*(7+rand(seed+3)*9)+Math.sin(t*.36+seed)*16)%1536+1536)%1536;
   const py=H*(.10+rand(seed+4)*.47)+Math.sin(t*.24+seed)*17-phase*18;
   ctx.globalAlpha=Math.min(.72,fade*gust*(.35+rand(seed+5)*.32)*intensity);
-  ctx.fillStyle=['#FFF0C5','#F5CFD9','#D8D2F4','#F7C8BF'][k%4];
+  ctx.fillStyle=['#F5CFD9','#D8D2F4','#F1C5DD','#CFC0E7'][k%4];
   ctx.beginPath();const size=1.0+rand(seed+6)*1.6;ctx.ellipse(px,py,size,size*.82,0,0,Math.PI*2);ctx.fill();
  }
  ctx.globalAlpha=1;
@@ -137,24 +149,24 @@ function floatSpores(ctx,m,t){
 // Individual pollen: screen-crossing wind currents, with independent soft motion.
 const pollen={items:[],t:null,cam:0,w:0,h:0,next:0,serial:0};
 const layers=[
- {size:[.012,.018],speed:[.022,.040],parallax:.09},
- {size:[.0155,.0315],speed:[.038,.072],parallax:.20},
- {size:[.032,.050],speed:[.055,.090],parallax:.35}
+ {size:[.024,.036],speed:[.022,.040],parallax:.09},
+ {size:[.031,.063],speed:[.038,.072],parallax:.20},
+ {size:[.064,.100],speed:[.055,.090],parallax:.35}
 ];
 const between=(a,b,r)=>a+(b-a)*r;
-function emit(m,W,H,seeded=false){
+function emit(m,W,H,seeded=false,seam=-Infinity){
  const d=density[m]||0;if(!d)return;
- const max=W<H?24:38;
+ const max=W<H?12:19;
  const free=max-pollen.items.length;if(free<=0)return;
  const seed=++pollen.serial*37+m*971;
  const r=i=>rand(seed+i*11);
  const layer=r(1)<.40?0:r(1)<.92?1:2;
  const count=Math.min(free,layer===2?2:r(2)<.45?1:r(2)<.78?2:3);
- const L=layers[layer],cy=H*between(.13,.54,r(4)),cx=seeded?W*between(.30,.88,r(5)):W+H*.07;
+ const L=layers[layer],cy=H*between(.13,.54,r(4)),cx=seeded?Math.max(seam+H*.12,W*between(.25,.95,r(5))):Math.max(W+H*.13,seam+H*.15);
  const common=between(...L.speed,r(6))*H,phi=r(7)*Math.PI*2, family=Math.floor(r(8)*pollenFamilies.length);
  for(let k=0;k<count;k++){
   const n=seed+k*73,q=i=>rand(n+i*17);
-  const size=H*Math.max(.012,between(...L.size,q(1))*(layer===2?1:k===0?1:k===1?.68:.48));
+  const size=H*Math.max(.024,between(...L.size,q(1))*(layer===2?1:k===0?1:k===1?.68:.48));
   const choices=pollenFamilies[family],art=choices[Math.floor(q(3)*choices.length)];
   pollen.items.push({layer,art,family,size,x:cx+k*H*.037+H*(q(4)-.5)*.025,y:cy+H*(q(5)-.5)*.09,
    age:seeded?1.7:q(6)*.45,life:Math.max(22,(W+H*.4)/common*1.8),
@@ -163,25 +175,25 @@ function emit(m,W,H,seeded=false){
    spin:between(.035,.11,q(12))*(q(13)<.5?-1:1),rock:between(.24,.57,q(14))});
  }
 }
-function tick(m,W,H,t,cam){
+function tick(m,W,H,t,cam,seam=-Infinity){
  if(mode==='off'||reduced||!ready()||!W||!H)return;
- const p=pollen,d=density[m]||0;
- // The opening scene is a quiet, pollen-free sanctuary, including when backtracking.
- if(m===0){pollenReset();return;}
+ const p=pollen;
+ // Introduce particles offscreen before the beach enters view, never at the scene switch.
+ const nearBeach=m===0&&seam<W+H*.25,zone=m===0?(nearBeach?1:0):m,d=density[zone]||0;
  const reset=p.t===null||t<p.t||t-p.t>1||Math.abs(W-p.w)>2||Math.abs(H-p.h)>2||Math.abs(cam-p.cam)>H*1.5;
- if(reset){p.items=[];p.t=t;p.cam=cam;p.w=W;p.h=H;p.next=t+.85;if(d){for(let i=0;i<4;i++)emit(m,W,H,true)}}
+ if(reset){p.items=[];p.t=t;p.cam=cam;p.w=W;p.h=H;p.next=t;if(d&&m>0){for(let i=0;i<2;i++)emit(zone,W,H,true,seam)}}
  const dt=Math.min(.055,Math.max(0,t-p.t)),dc=cam-p.cam;p.t=t;p.cam=cam;
  const windPulse=.74+.26*Math.sin(t*.21+m*.8);
  if(d&&t>=p.next){
-  emit(m,W,H);
-  const lull=rand(p.serial*29+m*73)<.24;
-  p.next=t+(lull?3.5:between(1.2,2.5,rand(p.serial*59)))/Math.max(.30,d);
- }else if(!d){p.next=t+1.3}
+  emit(zone,W,H,false,seam);
+  const lull=rand(p.serial*29+zone*73)<.24;
+  p.next=t+(lull?7:between(2.4,5,rand(p.serial*59)))/Math.max(.30,d);
+ }else if(!d){p.next=t}
  for(const q of p.items){
   q.age+=dt;
   const gust=1+.32*Math.sin(t*.38+q.phi)+.19*Math.sin(t*.93+q.phase);
   const flutter=Math.sin(q.age*q.rate+q.phase);
-  q.x-=q.vx*windPulse*gust*dt+dc*layers[q.layer].parallax;
+  q.x-=q.vx*windPulse*gust*dt+dc*(m===0?1:layers[q.layer].parallax);
   q.x+=H*.018*Math.sin(q.age*1.15+q.phase)*dt;
   const low=H*.07+q.size*.72,high=H*2/3-q.size*.72;
   let vy=q.vy+H*(.034*flutter+.014*Math.sin(q.age*1.3+q.phase*.7));
@@ -189,12 +201,12 @@ function tick(m,W,H,t,cam){
   q.y=Math.max(low,Math.min(high,q.y+vy*dt));
   q.rotation+=q.spin*dt;
  }
- p.items=p.items.filter(q=>q.x> -q.size*1.3&&q.x<W+H*.45);
+ p.items=p.items.filter(q=>q.x> -q.size*1.3&&q.x<W+H*.95);
 }
 function drawPollen(ctx,front,W,H){
  if(mode==='off'||reduced||!ready())return;
  for(const q of pollen.items.slice().sort((a,b)=>a.size-b.size)){
-  if((q.size>H*.018)!==front||q.x+q.size<0||q.x-q.size>W)continue;
+  if((q.size>H*.036)!==front||q.x+q.size<0||q.x-q.size>W)continue;
   const size=q.size;
   ctx.save();ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.translate(q.x,q.y);ctx.rotate(q.rotation+q.rock*Math.sin(q.age*.64+q.phase)+.12*Math.sin(q.age*1.31+q.phi));
   ctx.drawImage(atlas,q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
@@ -223,7 +235,7 @@ function draw(ctx,im,m,ox,oy,w,h,t,viewW,danger){
  if(mistScenes.has(m)&&j===0)mist(ctx,a,t,m);
  if(shimmerScenes.has(m)&&(m!==0||j!==0))shimmer(ctx,a,t,m===0);
  }
- if(m===0)openingSunset(ctx,im,t);
+ if(m===0){openingSunset(ctx,im,t);sunsetWaterGlints(ctx,t);}
  floatSpores(ctx,m,t);ctx.globalAlpha=1;
  if(!danger)distantBirds(ctx,m,t);
  ctx.restore();

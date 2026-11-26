@@ -395,7 +395,7 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  cx.save();cx.clearRect(0,0,W,H);cx.fillStyle=C.palette;cx.fillRect(0,0,W,H);
  const camera=Math.max(0,Math.min(chapterWidth(state.chapter)-W/S,state.x-W/S*.40));state.cam=camera;
  for(let m=0;m<moduleCount(state.chapter);m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&newModule[m]?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth){cx.drawImage(im,ox,state.originY,width*S,MH*S);if(newGolden&&newModule[m]&&state.chapter===0)window.GoldenAtmosphere?.draw(cx,im,m,ox,state.originY,width*S,MH*S,state.anim,W,!!birdEvent)}}
- if(newGolden&&state.chapter===0&&!terrainDebug){window.GoldenAtmosphere?.tick(moduleAt(0,state.x),W,H,state.anim,camera*S);window.GoldenAtmosphere?.drawPollen(cx,false,W,H)}
+ if(newGolden&&state.chapter===0&&!terrainDebug){window.GoldenAtmosphere?.tick(moduleAt(0,state.x),W,H,state.anim,camera*S,(moduleStart(0,1)-camera)*S);window.GoldenAtmosphere?.drawPollen(cx,false,W,H)}
  cx.save();cx.translate(-camera*S,state.originY);cx.scale(S,S);
  if(terrainDebug){cx.save();cx.lineWidth=3;const stroke=(lines,color,closed=false)=>{cx.strokeStyle=color;for(const l of lines){cx.beginPath();l.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));if(closed){cx.closePath();cx.fillStyle='rgba(75,195,255,.20)';cx.fill()}cx.stroke()}};
  if(newGolden){stroke(goldenGround,'#72ffac');stroke(goldenPlatforms,'#ffd56a');stroke(goldenWalls,'#ff657b');stroke(goldenHazards,'#63cbff',true)}else stroke(segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]),'#72ffac');cx.restore()}
