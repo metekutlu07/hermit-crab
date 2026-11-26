@@ -393,15 +393,30 @@ const next=CHAPTERS[state.chapter+1];showDialog(`${C.name} · Complete`,`<p>You 
 const birdArt=img('golden-shores-bird.png');
 let birdEvent=null,birdDone=new Set();
 let goldenIntroBusy=false;
+const introNames=['intro-loading.jpeg','wake01.jpeg','wake02.jpeg','wake03.jpeg','wake04.jpeg','intro-bird.jpeg'];
+const introCache=new Map();
+function loadIntroArt(name){
+ if(introCache.has(name))return introCache.get(name);
+ const promise=new Promise((resolve,reject)=>{
+  const im=new Image();im.alt='';im.draggable=false;im.decoding='async';im.fetchPriority=name==='intro-loading.jpeg'?'high':'auto';
+  im.onload=async()=>{try{if(im.decode)await im.decode()}catch{}resolve(im)};
+  im.onerror=()=>reject(new Error(name));im.src=assetURL(name);
+ });
+ introCache.set(name,promise);promise.catch(()=>{if(introCache.get(name)===promise)introCache.delete(name)});
+ return promise;
+}
+// Warm the small loading illustration before the player presses Begin Journey.
+loadIntroArt(introNames[0]).catch(()=>{});
+
 function showGoldenIntro(onStart){
  if(goldenIntroBusy)return;
  goldenIntroBusy=true;state.chapterIntro=true;state.paused=true;clearHeld();$('message').classList.remove('show');
  const zh=gameLanguage==='zh', overlay=$('overlay'),body=$('dialogBody'),buttons=$('dialogButtons'),heading=$('dialogTitle');
  overlay.classList.remove('chapter-intro','chapter-complete');overlay.querySelector('.completion-kicker')?.remove();
  overlay.classList.add('story-intro','visible');overlay.setAttribute('aria-hidden','false');
- const filenames=['intro-loading.jpeg','wake01.jpeg','wake02.jpeg','wake03.jpeg','wake04.jpeg','intro-bird.jpeg'];
- const images=filenames.map(name=>{const im=new Image();im.alt='';im.draggable=false;im.src=assetURL(name);return im});
- const ready=Promise.all(images.map(im=>new Promise(resolve=>{if(im.complete){resolve(im.naturalWidth>0);return}im.onload=()=>resolve(true);im.onerror=()=>resolve(false)})));
+ const images=[];
+ const jobs=introNames.map((name,i)=>loadIntroArt(name).then(im=>{images[i]=im;return im}));
+ jobs.forEach(job=>job.catch(()=>{}));
  const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
  let active=true;
@@ -429,14 +444,25 @@ function showGoldenIntro(onStart){
   if(!reduced){for(const [i,ms] of [[2,1200],[3,800],[4,800]]){await delay(ms);if(overlay.dataset.story!=='wake')return;art.replaceChildren(images[i])}}else art.replaceChildren(images[4]);
   next.disabled=false;
  }
- scene('loading',images[0],zh?'加载中':'Loading');const dots=document.createElement('span');dots.className='story-dots';dots.innerHTML='<i>.</i><i>.</i><i>.</i>';body.querySelector('p').append(dots);
- Promise.all([delay(3000),Promise.race([ready,delay(12000).then(()=>null)])]).then(([,ok])=>{
-  if(!active)return;
-  if(ok&&ok.every(Boolean)){awaken();return}
-  // Missing art must never block entry into the game.
-  overlay.classList.remove('story-intro');delete overlay.dataset.story;
-  showDialog('Golden Shores',zh?'<p>夕阳沉入海面，小小旅人苏醒了。是时候离开家，沿着海岸寻找新的贝壳。</p><p>飞鸟靠近时，躲进你的壳中，直到危险远去。</p>':'<p>As the sun sinks into the ocean, a little traveler awakens. It is time to leave home and search for new shells along the shore.</p><p>When birds approach, retreat into your shell until danger passes.</p>',[{text:'Begin Exploration',fn:start}]);overlay.classList.add('chapter-intro');
- });
+ const placeholder=document.createElement('div');
+ const art=scene('loading',placeholder,zh?'加载中':'Loading');
+ const dots=document.createElement('span');dots.className='story-dots';dots.innerHTML='<i>.</i><i>.</i><i>.</i>';body.querySelector('p').append(dots);
+ async function runLoading(){
+  try{
+   const shell=await jobs[0].catch(()=>loadIntroArt(introNames[0]));
+   art.replaceChildren(shell);
+   shell.classList.add('story-shell-reveal');
+   // The timer starts only once the shell is decoded and visible.
+   const minimum=delay(3000);
+   await Promise.all([minimum,...introNames.slice(1).map((name,i)=>jobs[i+1].catch(()=>loadIntroArt(name)).then(im=>{images[i+1]=im}))]);
+   if(active)awaken();
+  }catch(err){
+   // Do not replace the illustrated story with the old modal. Preserve the loading scene and offer retry.
+   const p=body.querySelector('p');p.textContent=zh?'插图加载失败，请重试。':'An illustration could not load. Please retry.';
+   button(zh?'重试':'Retry',()=>{goldenIntroBusy=false;overlay.classList.remove('story-intro');showGoldenIntro(onStart)});
+  }
+ }
+ runLoading();
 }
 function updateBird(dt){
  if(!newGolden||state.chapter!==0||testModule||!imageReady(birdArt))return;

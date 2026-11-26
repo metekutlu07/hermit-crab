@@ -458,3 +458,9 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 @keyframes storyReveal{from{opacity:0}to{opacity:1}}
 @media(orientation:portrait){#overlay.story-intro .dialog{width:100%}}
 @media(prefers-reduced-motion:reduce){#overlay.story-intro *{animation:none!important}}
+
+/* Reveal the painted loading shell upwards, after decoding, not while downloading. */
+#overlay.story-intro[data-story=loading] .story-painting{animation:none}
+#overlay.story-intro[data-story=loading] .story-shell-reveal{animation:storyShellFill 2.7s linear both}
+@keyframes storyShellFill{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
+@media(prefers-reduced-motion:reduce){#overlay.story-intro[data-story=loading] .story-shell-reveal{animation:none;clip-path:none}}
