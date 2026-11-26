@@ -433,7 +433,19 @@ function showGoldenIntro(onStart){
  }
  async function start(){
   if(!active)return;active=false;buttons.querySelector('button')?.setAttribute('disabled','');primeAudio();
-  try{if(onStart)await onStart()}finally{goldenIntroBusy=false;overlay.classList.remove('story-intro');delete overlay.dataset.story;closeDialog()}
+  try{
+   await fadeOut();
+   if(onStart)await onStart();
+   state.paused=true;clearHeld();
+   // Keep the black intro overlay above the initialized world, then dissolve it away.
+   overlay.getBoundingClientRect();
+   overlay.classList.add('story-game-reveal');
+   await delay(reduced?0:900);
+  }finally{
+   goldenIntroBusy=false;overlay.classList.remove('story-intro','story-game-reveal');
+   overlay.querySelector('.dialog').classList.remove('story-fade-out','story-ui-hidden');
+   delete overlay.dataset.story;closeDialog();
+  }
  }
  const fadeMs=reduced?0:650;
  const holdMs=reduced?0:1000;
@@ -574,7 +586,7 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  cx.save();cx.clearRect(0,0,W,H);cx.fillStyle=C.palette;cx.fillRect(0,0,W,H);
  const camera=Math.max(0,Math.min(chapterWidth(state.chapter)-W/S,state.x-W/S*.40));state.cam=camera;
  for(let m=0;m<moduleCount(state.chapter);m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&newModule[m]?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth){cx.drawImage(im,ox,state.originY,width*S,MH*S);if(newGolden&&newModule[m]&&state.chapter===0)window.GoldenAtmosphere?.draw(cx,im,m,ox,state.originY,width*S,MH*S,state.anim,W,!!birdEvent)}}
- if(newGolden&&state.chapter===0&&!terrainDebug){window.GoldenAtmosphere?.tick(moduleAt(0,state.x),W,H,state.anim,camera*S,(moduleStart(0,1)-camera)*S,chapterWidth(0)*S);window.GoldenAtmosphere?.drawPollen(cx,false,W,H)}
+ // Large illustrated pollen disabled; fine atmospheric motes remain in GoldenAtmosphere.draw.
  cx.save();cx.translate(-camera*S,state.originY);cx.scale(S,S);
  if(terrainDebug){cx.save();cx.lineWidth=3;const stroke=(lines,color,closed=false)=>{cx.strokeStyle=color;for(const l of lines){cx.beginPath();l.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));if(closed){cx.closePath();cx.fillStyle='rgba(75,195,255,.20)';cx.fill()}cx.stroke()}};
  if(newGolden){stroke(goldenGround,'#72ffac');stroke(goldenPlatforms,'#ffd56a');stroke(goldenWalls,'#ff657b');stroke(goldenHazards,'#63cbff',true)}else stroke(segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]),'#72ffac');cx.restore()}
@@ -609,7 +621,7 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
   if(imageReady(sprite)){cx.save();cx.translate(px,py);if(state.vx< -12)cx.scale(-1,1);cx.drawImage(sprite,-76,-116,152,116);cx.restore()}
  }
  cx.restore();
- if(newGolden&&state.chapter===0&&!terrainDebug)window.GoldenAtmosphere?.drawPollen(cx,true,W,H);
+
  cx.restore()}
 function updateBirdWarning(){const el=$('birdWarning'),b=birdEvent;const active=!!b&&!b.resolved&&state.mode==='game'&&!state.paused;el.hidden=!active;if(!active)return;const remaining=Math.max(0,b.warning-b.t);el.querySelector('span').textContent=(gameLanguage==='zh'?'飞鸟靠近 · 按住躲藏键':'Bird approaching · Hold HIDE')+' · '+remaining.toFixed(1)+'s';el.querySelector('i').style.transform='scaleX('+Math.max(0,Math.min(1,remaining/b.warning))+')';}
 function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);updateBirdWarning();updateAtmosphere();render();requestAnimationFrame(loop)}requestAnimationFrame(loop);

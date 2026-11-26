@@ -505,3 +505,7 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 @keyframes storySpecimenAppear{from{opacity:0}to{opacity:1}}
 #overlay.story-intro[data-story=loading] .story-caption p{top:87%}
 @media(prefers-reduced-motion:reduce){#overlay.story-intro[data-story=loading] .story-shell-cell .story-specimen-wipe{animation:none!important;opacity:1}}
+
+/* Fade the initialized playable painting in behind the black story curtain. */
+#overlay.story-intro.story-game-reveal{opacity:0;transition:opacity .9s ease;pointer-events:auto}
+@media(prefers-reduced-motion:reduce){#overlay.story-intro.story-game-reveal{transition:none}}
