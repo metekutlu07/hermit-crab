@@ -202,7 +202,7 @@ const testModule=Number(new URLSearchParams(location.search).get('testModule'))|
 let newGolden=false,newReady=false,terrainDebug=false,loadedCount=0;
 const defaults=window.GOLDEN_TERRAIN;
 let terrain=defaults;
-try{const v=JSON.parse(localStorage.getItem('goldenTerrainV3')||'null');if(Array.isArray(v)&&v.length===defaults.length)terrain=v.map((m,i)=>({...defaults[i],ground:m.ground,platforms:m.platforms,walls:m.walls||defaults[i].walls,hazards:m.hazards||defaults[i].hazards}));}catch{}
+try{const v=JSON.parse(localStorage.getItem('goldenTerrainV4')||'null');if(Array.isArray(v)&&v.length===defaults.length)terrain=v.map((m,i)=>({...defaults[i],ground:m.ground,platforms:m.platforms,walls:m.walls||defaults[i].walls,hazards:m.hazards||defaults[i].hazards}));}catch{}
 const newWidths=defaults.map(m=>MH*m.width/m.height),newModule=defaults.map(()=>false);
 function loadPainting(name){return new Promise(resolve=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src=assetURL(name)})}
 async function choosePainting(primary,fallback){return (await loadPainting(primary))||(fallback?await loadPainting(fallback):null)}
@@ -239,9 +239,9 @@ function buildGoldenSurfaces(){
 let goldenSurfaces=buildGoldenSurfaces();
 function lineY(points,x){if(x<points[0][0]||x>points[points.length-1][0])return null;
  for(let i=1;i<points.length;i++){const [a,y]=points[i-1],[b,z]=points[i];if(x<=b)return y+(z-y)*(x-a)/(b-a)}return null}
-function floorAt(ch,x){if(!newGolden||ch!==0)return CHAPTERS[ch].floor;const ys=goldenGround.map(l=>lineY(l,x)).filter(y=>y!==null);return ys.length?Math.min(...ys):CHAPTERS[ch].floor}
+function floorAt(ch,x){if(!newGolden||ch!==0)return CHAPTERS[ch].floor;const ys=goldenGround.map(l=>lineY(l,x)).filter(y=>y!==null);if(ys.length)return Math.min(...ys);const platforms=goldenPlatforms.map(l=>lineY(l,x)).filter(y=>y!==null);return platforms.length?Math.min(...platforms):CHAPTERS[ch].floor}
 function hasSupport(x){return goldenSurfaces.some(l=>lineY(l,x)!==null)}
-function safeSpawn(m){const start=moduleStart(0,m);const lines=goldenGround.filter(l=>l[0][0]>=start-.1&&l[0][0]<start+moduleWidth(0,m));const l=lines[0];return l?Math.min(l[l.length-1][0]-2,l[0][0]+Math.min(105,(l[l.length-1][0]-l[0][0])/2)):start+105}
+function safeSpawn(m){const start=moduleStart(0,m),end=start+moduleWidth(0,m),within=l=>l[0][0]>=start-.1&&l[0][0]<end;const ground=goldenGround.filter(within);const candidates=ground.length?ground:goldenPlatforms.filter(within).sort((a,b)=>a[0][0]-b[0][0]);const l=candidates[0];return l?Math.min(l[l.length-1][0]-2,l[0][0]+Math.min(105,(l[l.length-1][0]-l[0][0])/2)):start+105}
 // Side collision: swept horizontal test against solid line segments.
 const BODY_HALF=24,BODY_HEIGHT=64;
 function blockWalls(prevX,prevY,nextX,nextY){
