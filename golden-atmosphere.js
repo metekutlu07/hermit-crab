@@ -53,6 +53,64 @@ function shimmer(ctx,a,t,warm){
  }
  ctx.restore();
 }
+// Opening sunset: illuminate existing painted pigment rather than adding a glowing disc.
+// Localized masks are extracted once from the actual painting at its native coordinates.
+let sunsetMasks=null;
+function buildSunsetMasks(im){
+ if(sunsetMasks&&sunsetMasks.im===im)return sunsetMasks;
+ if(typeof document==='undefined'||!im?.naturalWidth)return null;
+ try{
+  const source=document.createElement('canvas');source.width=1536;source.height=938;
+  const sc=source.getContext('2d',{willReadFrequently:true});sc.drawImage(im,0,0,1536,938);
+  const px=sc.getImageData(0,0,1536,938).data;
+  function makeMask(x,y,w,h,kind){
+   const c=document.createElement('canvas');c.width=w;c.height=h;const ctx=c.getContext('2d');const out=ctx.createImageData(w,h),d=out.data;
+   for(let j=0;j<h;j++)for(let i=0;i<w;i++){
+    const X=x+i,Y=y+j,at=(Y*1536+X)*4,k=(j*w+i)*4;
+    const r=px[at],g=px[at+1],b=px[at+2];
+    // Warm gold/peach pigment only; dark purple contours and cool sea are excluded.
+    const warm=smooth((r-b-12)/54)*smooth((g-b+4)/40)*smooth((r-145)/80);
+    let weight=0;
+    if(kind==='sun'){
+     // Approximate solar centre from the supplied mobile screenshot.
+     const rho=Math.hypot((X-502)/116,(Y-371)/103);
+     const falloff=smooth(1-rho);
+     // Avoid the large foreground tree on the left of the opening.
+     weight=falloff*smooth((X-412)/42)*warm;
+    }else{
+     // Existing horizontal golden reflections beneath the sun, not the sandy path.
+     const gold=warm*smooth((g-126)/73);
+     const edge=smooth((X-x)/18)*smooth((x+w-X)/24)*smooth((Y-y)/8)*smooth((y+h-Y)/10);
+     weight=gold*edge;
+    }
+    d[k]=255;d[k+1]=kind==='sun'?217:232;d[k+2]=kind==='sun'?174:173;d[k+3]=Math.round(weight*255);
+   }
+   ctx.putImageData(out,0,0);return{c,x,y,w,h};
+  }
+  sunsetMasks={im,sun:makeMask(405,270,220,150,'sun'),sea:makeMask(420,424,375,74,'sea')};
+  return sunsetMasks;
+ }catch(e){return null}
+}
+function openingSunset(ctx,im,t){
+ const masks=buildSunsetMasks(im);if(!masks)return;
+ ctx.save();ctx.globalCompositeOperation='screen';
+ const sun=masks.sun;
+ // Small amplitude and two slow, non-synchronized cycles avoid a mechanical pulse.
+ const breathe=.5+.32*Math.sin(t*.31)+.18*Math.sin(t*.113+1.6);
+ ctx.globalAlpha=.055+.095*breathe;
+ ctx.drawImage(sun.c,sun.x,sun.y);
+ const sea=masks.sea;
+ // Travel along existing golden brushstrokes. Multiple staggered horizontal bands.
+ for(let y=0;y<sea.h;y+=2){
+  const f=y/sea.h,phase=t*(.80+f*.24)-y*.21;
+  const glint=Math.pow(.5+.5*Math.sin(phase+.50*Math.sin(t*.23+y*.07)),2);
+  const shimmer=.5+.5*Math.sin(t*.47+y*.13+1.3);
+  ctx.globalAlpha=.055+.24*glint*(.48+.52*shimmer);
+  const dy=Math.min(2,sea.h-y);
+  ctx.drawImage(sea.c,0,y,sea.w,dy,sea.x,sea.y+y,sea.w,dy);
+ }
+ ctx.restore();
+}
 function mist(ctx,a,t,m){
  if(a.r-a.x<160||a.b-a.y<24)return;
  ctx.save();clip(ctx,a.p);const cx=(a.x+a.r)/2+Math.sin(t/12+m)*((a.r-a.x)*.16),cy=a.y+(a.b-a.y)*.48;
@@ -163,8 +221,9 @@ function draw(ctx,im,m,ox,oy,w,h,t,viewW,danger){
  ctx.beginPath();ctx.rect(0,0,1536,heights[m]);ctx.clip();
  for(let j=0;j<areas[m].length;j++){const a=areas[m][j];if(ox+a.r*w/1536<0||ox+a.x*w/1536>viewW)continue;
  if(mistScenes.has(m)&&j===0)mist(ctx,a,t,m);
- if(shimmerScenes.has(m))shimmer(ctx,a,t,m===0&&j<2);
+ if(shimmerScenes.has(m)&&(m!==0||j!==0))shimmer(ctx,a,t,m===0);
  }
+ if(m===0)openingSunset(ctx,im,t);
  floatSpores(ctx,m,t);ctx.globalAlpha=1;
  if(!danger)distantBirds(ctx,m,t);
  ctx.restore();
