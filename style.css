@@ -383,5 +383,5 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
  #home .home-tide.ready .tide-1{animation:homeTideAdvance 12s ease-in-out infinite}
  #home:not(.visible) .home-tide-frame{animation-play-state:paused!important}
 }
-@keyframes homeTideRetreat{0%,50%,100%{opacity:0}25%{opacity:1}}
-@keyframes homeTideAdvance{0%,50%,100%{opacity:0}75%{opacity:1}}
+@keyframes homeTideRetreat{0%,19%,46%,100%{opacity:0}22%,43%{opacity:1}}
+@keyframes homeTideAdvance{0%,69%,96%,100%{opacity:0}72%,93%{opacity:1}}
