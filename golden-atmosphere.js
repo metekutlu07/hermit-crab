@@ -30,8 +30,6 @@ const cell=160;
 const ready=()=>atlas.complete&&atlas.naturalWidth===640&&atlas.naturalHeight===480;
 // Lavender, orange/coral and pink only; never select the green cells.
 const pollenFamilies=[[1,4,10],[0,5,8,11],[3,6]];
-let mutedAtlas=null;
-function backgroundAtlas(){if(mutedAtlas)return mutedAtlas;if(typeof document==='undefined'||!ready())return atlas;try{const c=document.createElement('canvas');c.width=640;c.height=480;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(atlas,0,0);const im=x.getImageData(0,0,c.width,c.height),d=im.data;for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const l=.2126*d[i]+.7152*d[i+1]+.0722*d[i+2];for(let k=0;k<3;k++)d[i+k]=Math.round((l+(d[i+k]-l)*.58)*.78)}x.putImageData(im,0,0);mutedAtlas=c;return c}catch{mutedAtlas=atlas;return atlas}}
 const birdScenes=new Set([0,1,3,5,8,10]);
 const mistScenes=new Set([0,1,3,5,8]);
 const shimmerScenes=new Set([0,1,2,5,7,8,10]);
@@ -73,7 +71,7 @@ function floatSpores(ctx,m,t){
   const px=((rand(seed+2)*1536+dir*t*(7+rand(seed+3)*9)+Math.sin(t*.36+seed)*16)%1536+1536)%1536;
   const py=H*(.10+rand(seed+4)*.47)+Math.sin(t*.24+seed)*17-phase*18;
   ctx.globalAlpha=Math.min(.72,fade*gust*(.35+rand(seed+5)*.32)*intensity);
-  ctx.fillStyle=['#BF9C8B','#B58B9D','#9A89AD','#B79BA7'][k%4];
+  ctx.fillStyle=['#FFF0C5','#F5CFD9','#D8D2F4','#F7C8BF'][k%4];
   ctx.beginPath();const size=1.0+rand(seed+6)*1.6;ctx.ellipse(px,py,size,size*.82,0,0,Math.PI*2);ctx.fill();
  }
  ctx.globalAlpha=1;
@@ -139,7 +137,7 @@ function drawPollen(ctx,front,W,H){
   if((q.size>H*.015)!==front||q.x+q.size<0||q.x-q.size>W)continue;
   const size=q.size;
   ctx.save();ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.translate(q.x,q.y);ctx.rotate(q.rotation+q.rock*Math.sin(q.age*.64+q.phase)+.12*Math.sin(q.age*1.31+q.phi));
-  ctx.drawImage(q.size<=H*.015?backgroundAtlas():atlas,q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
+  ctx.drawImage(atlas,q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
  }
 }
 function pollenReset(){pollen.t=null;pollen.items=[]}
