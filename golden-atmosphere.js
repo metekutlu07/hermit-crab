@@ -29,7 +29,7 @@ const atlas=new Image();atlas.src='assets/golden-blob-pollen.png?v=1';
 const cell=160;
 const ready=()=>atlas.complete&&atlas.naturalWidth===640&&atlas.naturalHeight===480;
 // Purple and pink only, retaining original pigments.
-const pollenFamilies=[[1,4,10],[3,6]];
+const pollenFamilies=[[4],[3,6]]; // Rounded lavender and pink only; exclude elongated bean silhouettes.
 const birdScenes=new Set([0,1,3,5,8,10]);
 const mistScenes=new Set([0,1,3,5,8]);
 const shimmerScenes=new Set([0,1,2,3,4,5,7,8,9,10]);
