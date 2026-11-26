@@ -10,7 +10,24 @@ function snapshot(){history.push(JSON.stringify(data));if(history.length>50)hist
 function status(t){$('status').textContent=t}
 function setMode(m){mode=m;for(const id of ['move','insert','ground','platform','wall','water'])$(id).classList.toggle('active',id===m);status(m==='move'?'Drag any vertex. Select a line from the menu or click a vertex.':m==='insert'?'Click to insert a point on the selected surface.':m==='wall'?'Click wall endpoints in any direction, then Finish line.':m==='water'?'Click around the water boundary, then Finish line.':'Click from left to right, then Finish line.');}
 function list(){const sel=$('lines');sel.replaceChildren();for(const k of kinds)cur()[k].forEach((l,i)=>{const o=document.createElement('option');o.value=k+':'+i;o.textContent=names[k]+' '+(i+1);sel.append(o)});sel.value=kind+':'+lineIndex;if(!sel.value&&sel.options.length){sel.selectedIndex=0;[kind,lineIndex]=sel.value.split(':');lineIndex=+lineIndex}draw()}
-function persist(){if(!valid(data)){status('Finish or remove incomplete lines before saving.');return false}try{localStorage.setItem(key,JSON.stringify(data));status('Saved locally. Test or export when ready.');return true}catch(e){status('Browser storage unavailable. Export JSON instead.');return false}}
+function firstIssue(){
+ for(let i=0;i<data.length;i++)for(const k of kinds)for(let n=0;n<data[i][k].length;n++){
+  const l=data[i][k][n];
+  if(l.length<minPoints(k))return {i,k,n,reason:'needs '+minPoints(k)+' points; currently '+l.length};
+  for(let p=0;p<l.length;p++){
+   const q=l[p];
+   if(!Array.isArray(q)||q.length!==2||!q.every(Number.isFinite)||q[0]<0||q[0]>base[i].width||q[1]<0||q[1]>base[i].height)return {i,k,n,reason:'point '+(p+1)+' lies outside the painting or is invalid'};
+   if(ordered(k)&&p&&q[0]<=l[p-1][0])return {i,k,n,reason:'points '+p+' and '+(p+1)+' must be ordered left to right'};
+  }
+ }
+ return null;
+}
+function locateIssue(issue){
+ const {i,k,n,reason}=issue;
+ kind='ground';lineIndex=-1;choose(i);kind=k;lineIndex=n;vertex=-1;setMode('move');list();
+ status('Module '+String(i+1).padStart(2,'0')+' · '+names[k]+' '+(n+1)+': '+reason+'. Correct this line or use Delete line if accidental. Your other edits are unchanged.');
+}
+function persist(){if(!valid(data)){const issue=firstIssue();if(issue)locateIssue(issue);else status('Terrain data is invalid. No edits have been removed.');return false}try{localStorage.setItem(key,JSON.stringify(data));status('Saved locally. Test or export when ready.');return true}catch(e){status('Browser storage unavailable. Export JSON instead.');return false}}
 function draw(){ctx.clearRect(0,0,cv.width,cv.height);if(img.complete&&img.naturalWidth)ctx.drawImage(img,0,0,cv.width,cv.height);ctx.lineJoin='round';ctx.lineCap='round';const unit=cv.width/Math.max(1,cv.getBoundingClientRect().width);for(const k of kinds)cur()[k].forEach((l,i)=>{const sel=kind===k&&lineIndex===i;ctx.strokeStyle=colors[k];ctx.fillStyle=ctx.strokeStyle;ctx.globalAlpha=sel?1:.75;ctx.lineWidth=(sel?3:2)*unit;ctx.beginPath();l.forEach((p,j)=>j?ctx.lineTo(...p):ctx.moveTo(...p));if(k==='hazards'&&l.length>=3){ctx.closePath();ctx.save();ctx.globalAlpha=.19;ctx.fill();ctx.restore()}ctx.stroke();if(sel)l.forEach((p,j)=>{ctx.beginPath();ctx.arc(p[0],p[1],(j===vertex?7:4.5)*unit,0,Math.PI*2);ctx.fillStyle=j===vertex?'white':ctx.strokeStyle;ctx.fill();ctx.strokeStyle='#20172c';ctx.lineWidth=1.2*unit;ctx.stroke();ctx.strokeStyle=colors[k]});ctx.globalAlpha=1});}
 function choose(i){if(line()&&line().length<minPoints(kind)){status('Finish or delete the incomplete line first.');return}index=Math.max(0,Math.min(base.length-1,i));$('module').value=index;kind='ground';lineIndex=0;vertex=-1;setMode('move');cv.width=cur().width;cv.height=cur().height;const token=++loadToken;img=new Image();img.onload=()=>{if(token===loadToken)draw()};img.onerror=()=>status('Cannot load '+cur().file);img.src='assets/'+cur().file;list()}
 function point(e){const r=cv.getBoundingClientRect();return [Math.max(0,Math.min(cv.width,Math.round((e.clientX-r.left)*cv.width/r.width))),Math.max(0,Math.min(cv.height,Math.round((e.clientY-r.top)*cv.height/r.height)))]}
