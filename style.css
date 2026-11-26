@@ -382,3 +382,38 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 
 /* Mobile homepage: preserve existing sound button, move it to the top right. */
 @media(orientation:portrait){#home .home-art.clean-home #soundHome{inset:auto;top:max(10px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));left:auto;bottom:auto}}
+
+/* Chapter I completion: full-page illustrated field, simple graphic typography. */
+#overlay.chapter-complete{background:#f3d9ac url('assets/home-landscape-empty.jpeg') center/cover no-repeat;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;overflow:auto;overscroll-behavior:contain;align-items:stretch;justify-content:center}
+#overlay.chapter-complete.visible{display:flex;animation:chapter-fade .5s ease both}
+#overlay.chapter-complete .dialog{box-sizing:border-box;position:relative;width:100%;max-width:none;max-height:none;min-height:100%;margin:0;padding:max(24px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left));border:0;border-radius:0;box-shadow:none;background:rgba(255,239,211,.55);color:#784447;text-align:center;font-family:var(--graphic-font);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;overflow:auto}
+#overlay.chapter-complete .completion-kicker{font:500 11px/1.3 var(--graphic-font);letter-spacing:.15em;color:#784447;margin:0 0 9px}
+#overlay.chapter-complete h2{font:400 clamp(30px,5vw,62px)/1.1 var(--graphic-font);color:#A64B49;letter-spacing:-.035em;margin:0 0 13px;text-shadow:none}
+#overlay.chapter-complete #dialogBody{width:min(100%,1080px)}
+#overlay.chapter-complete .completion-intro,#overlay.chapter-complete .completion-summary{font:400 clamp(13px,2vw,18px)/1.45 var(--graphic-font);color:#784447;margin:0 auto 6px;max-width:560px;text-shadow:none}
+#overlay.chapter-complete .completion-shells{list-style:none;padding:0;margin:clamp(18px,4vh,38px) auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;width:min(100%,900px)}
+#overlay.chapter-complete .completion-shell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:0}
+#overlay.chapter-complete .completion-art{width:100%;aspect-ratio:1/1;display:grid;place-items:center;min-width:0}
+#overlay.chapter-complete .completion-art img{display:block;width:100%;height:100%;max-width:170px;max-height:170px;object-fit:contain;filter:none}
+#overlay.chapter-complete .completion-label{text-align:center;display:flex;flex-direction:column;gap:2px}
+#overlay.chapter-complete .completion-name{font:500 clamp(14px,1.7vw,20px)/1.3 var(--graphic-font);color:#784447}
+#overlay.chapter-complete .completion-status{font-size:10px;color:#784447}
+#overlay.chapter-complete .completion-missing{font-size:29px;color:#A67B69}
+#overlay.chapter-complete .uncollected{opacity:.7}
+#overlay.chapter-complete #dialogButtons{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;width:100%;margin:0}
+#overlay.chapter-complete button{margin:0;min-height:40px;padding:9px 16px;background:transparent;border:1px solid #A64B49;border-radius:0;color:#A64B49;box-shadow:none;text-shadow:none;font:500 13px/1.3 var(--graphic-font);touch-action:manipulation}
+#overlay.chapter-complete button:focus-visible{outline-color:#A64B49}
+#overlay.chapter-complete button:active{background:rgba(166,75,73,.1)}
+@media(orientation:portrait){
+ #overlay.chapter-complete{background-image:url('assets/home-portrait-empty.jpeg')}
+ #overlay.chapter-complete .dialog{background:rgba(255,239,211,.72);padding-top:max(22px,env(safe-area-inset-top));padding-bottom:max(18px,env(safe-area-inset-bottom));justify-content:safe center}
+ #overlay.chapter-complete h2{font-size:clamp(31px,8vw,43px);margin-bottom:10px}
+ #overlay.chapter-complete .completion-shells{grid-template-columns:1fr;width:min(100%,305px);gap:3px;margin:15px auto 16px}
+ #overlay.chapter-complete .completion-shell{flex-direction:row;justify-content:flex-start;gap:16px;min-height:0;padding:1px 8px}
+ #overlay.chapter-complete .completion-art{width:clamp(56px,10.5dvh,87px);flex:none}
+ #overlay.chapter-complete .completion-label{text-align:left;flex:1}
+ #overlay.chapter-complete .completion-name{font-size:clamp(16px,4.5vw,20px)}
+ #overlay.chapter-complete #dialogButtons{gap:7px;flex-direction:column;width:min(100%,270px)}
+ #overlay.chapter-complete button{width:100%;min-height:38px}
+}
+@media(prefers-reduced-motion:reduce){#overlay.chapter-complete.visible{animation:none}}

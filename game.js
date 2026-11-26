@@ -354,7 +354,41 @@ function groundSegments(ch){let seg=[];for(let m=0;m<3;m++){const left=m*MW,righ
 let segments=CHAPTERS.map((_,i)=>groundSegments(i));
 function breakWall(){if(state.broken)return;state.broken=true;state.vx=135;tone(290);note('The granite shell fractures the ancient stone!',2500);save()}
 function hurt(message){if(state.invincible>0){if(newGolden){state.x=state.checkpoint;state.y=floorAt(state.chapter,state.x)-3;state.vx=state.vy=0;state.ground=false;clearHeld()}return}state.health--;state.invincible=1.7;clearHeld();tone(240);if(newGolden)state.x=state.checkpoint;if(state.health<=0){state.health=3;state.x=state.checkpoint;note('The traveler retreats into its shell · Checkpoint',2000)}else note(message||'Careful! One heart lost.',1700);state.y=floorAt(state.chapter,state.x)-40;state.vy=0;state.vx=0;state.ground=false;jumps=0;updateHud();save()}
-function finishChapter(){state.paused=true;clearHeld();const C=CHAPTERS[state.chapter];save();if(state.chapter===3){mode('home');showDialog('Homecoming','<p>The little traveler has crossed the golden shore, coral gardens, crystal caverns and sea of stars.</p><p>The most extraordinary shell may be the one that feels like home.</p>',[{text:'See the Homecoming',fn:()=>{mode('home');showEpilogue()}},{text:'Return to Main Menu',fn:()=>{closeDialog();mode('home')}}]);return}
+function showGoldenCompletion(preview=false){
+ const zh=gameLanguage==='zh',names=CHAPTERS[0].specimens;
+ const found=names.map((_,i)=>preview||!!state.collections['0-'+i]);
+ const count=found.filter(Boolean).length;
+ const number=['no','one','two','three','four','five'][count];
+ const title=zh?'恭喜！':'Congratulations!';
+ const intro=zh?'你已探索了岛屿的金色海岸。':'You have explored the Golden Shores of the island.';
+ const summary=zh?'你已收集了 '+count+' 种不同的贝壳。':count===1?'You have collected one shell.':'You have collected '+number+' different shells.';
+ const next=()=>{closeDialog();if(preview){mode('home');return}enterChapter(1)};
+ const home=()=>{closeDialog();mode('home')};
+ showDialog(title,'',[{text:zh?'前往珊瑚花园':'Continue to Coral Gardens',fn:next},{text:zh?'返回主菜单':'Main Menu',fn:home}]);
+ const overlay=$('overlay');overlay.classList.add('chapter-complete');
+ const body=$('dialogBody');body.innerHTML='';
+ function el(tag,cls,txt,parent){const node=document.createElement(tag);if(cls)node.className=cls;if(txt!==undefined)node.textContent=txt;parent.append(node);return node}
+ el('p','completion-kicker',zh?'第一章 · 金色海岸':'CHAPTER I · GOLDEN SHORES',body);
+ el('p','completion-intro',intro,body);
+ el('p','completion-summary',summary,body);
+ const list=el('ol','completion-shells',undefined,body);
+ names.forEach((name,i)=>{
+  const row=el('li','completion-shell'+(found[i]?'':' uncollected'),undefined,list);
+  const art=el('div','completion-art',undefined,row);
+  if(found[i]){
+   const image=document.createElement('img');
+   image.alt='';image.draggable=false;image.src=imageReady(painterlySpecimenArt[i])?painterlySpecimenArt[i].src:assetURL(specimenFiles[i].replace('.png','-painted.png'));
+   image.onerror=()=>{image.onerror=null;image.src=assetURL(specimenFiles[i])};art.append(image);
+  }else el('span','completion-missing','?',art);
+  const label=el('div','completion-label',undefined,row);
+  el('span','completion-name',found[i]?(zh?tr(name):name):(zh?'尚未发现':'Undiscovered shell'),label);
+  if(!found[i])el('small','completion-status',zh?'未收集':'Not collected',label);
+ });
+ // Put the chapter identifier before the heading; preserve the standard dialog semantics.
+ const kicker=body.querySelector('.completion-kicker');$('dialogTitle').before(kicker);
+ $('dialogTitle').focus?.();
+}
+function finishChapter(){state.paused=true;clearHeld();const C=CHAPTERS[state.chapter];save();if(state.chapter===0){showGoldenCompletion();return}if(state.chapter===3){mode('home');showDialog('Homecoming','<p>The little traveler has crossed the golden shore, coral gardens, crystal caverns and sea of stars.</p><p>The most extraordinary shell may be the one that feels like home.</p>',[{text:'See the Homecoming',fn:()=>{mode('home');showEpilogue()}},{text:'Return to Main Menu',fn:()=>{closeDialog();mode('home')}}]);return}
 const next=CHAPTERS[state.chapter+1];showDialog(`${C.name} · Complete`,`<p>You reached the end of this chapter.</p><p>Continue into <strong>${next.name}</strong>?</p>`,[{text:`Enter ${next.name}`,fn:()=>{closeDialog();enterChapter(state.chapter+1)}},{text:'Home',fn:()=>{closeDialog();mode('home')}}])}
 const birdArt=img('golden-shores-bird.png');
 let birdEvent=null,birdDone=new Set();
@@ -470,9 +504,9 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  cx.restore()}
 function updateBirdWarning(){const el=$('birdWarning'),b=birdEvent;const active=!!b&&!b.resolved&&state.mode==='game'&&!state.paused;el.hidden=!active;if(!active)return;const remaining=Math.max(0,b.warning-b.t);el.querySelector('span').textContent=(gameLanguage==='zh'?'飞鸟靠近 · 按住躲藏键':'Bird approaching · Hold HIDE')+' · '+remaining.toFixed(1)+'s';el.querySelector('i').style.transform='scaleX('+Math.max(0,Math.min(1,remaining/b.warning))+')';}
 function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);updateBirdWarning();updateAtmosphere();render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
-function showDialog(title,html,buttons){state.paused=true;clearHeld();$('dialogTitle').textContent=tr(title);$('dialogBody').innerHTML=translatedText(html);const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=tr(b.text);btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
+function showDialog(title,html,buttons){state.paused=true;clearHeld();$('overlay').classList.remove('chapter-complete');$('overlay').querySelector('.completion-kicker')?.remove();$('dialogTitle').textContent=tr(title);$('dialogBody').innerHTML=translatedText(html);const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=tr(b.text);btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
 document.addEventListener('visibilitychange',updateAtmosphere);
-function closeDialog(){state.chapterIntro=false;$('overlay').classList.remove('chapter-intro'); $('overlay').classList.remove('visible');$('overlay').setAttribute('aria-hidden','true');state.paused=false;clearHeld()}
+function closeDialog(){state.chapterIntro=false;$('overlay').classList.remove('chapter-intro','chapter-complete');$('overlay').querySelector('.completion-kicker')?.remove(); $('overlay').classList.remove('visible');$('overlay').setAttribute('aria-hidden','true');state.paused=false;clearHeld()}
 function pause(){showDialog('Traveler’s Journal','<p>Pause the journey, consult your shell encyclopedia, or return to the beach.</p>',[{text:'Resume',fn:closeDialog},{text:'Shell Encyclopedia',fn:encyclopedia},{text:'Settings',fn:settings},{text:'Terrain Editor',fn:()=>window.open('terrain.html','_blank')},{text:'Restart Chapter',fn:()=>{closeDialog();enterChapter(state.chapter);if(state.chapter===0&&!testModule)showGoldenIntro()}},{text:'Main Menu',fn:()=>{closeDialog();mode('home')}}])}
 function encyclopedia(){let html='<p class="progress">Collect specimens across the four chapters and discover their habitats.</p>';for(let c=0;c<4;c++){html+=`<h3>${CHAPTERS[c].name}</h3>`;CHAPTERS[c].specimens.forEach((s,i)=>{const got=state.collections[`${c}-${i}`];html+=`<div class="entry ${got?'':'locked'}"><span>${got?'🐚':'◇'} ${got?s:'Undiscovered shell'}</span><span>${got?'Collected':'?'}</span></div>`})}showDialog('Shell Encyclopedia',html,[{text:'Back',fn:()=>{closeDialog();if(state.mode==='game')pause()}}])}
 function about(){const zh=gameLanguage==='zh';showDialog('About', '<p>'+ (zh?"《壳中旅人》是一场水彩世界中的冒险，讲述小寄居蟹螺仔离开海岸边的家，探索未知世界的故事。它穿越金色海岸、珊瑚花园、水晶洞穴与星之海，收集贝壳、发现新的能力，并寻找归家的道路。这是一段关于好奇心、脆弱、适应与归属的宁静旅程；每一次换壳，都是一次成长。":"A Traveler in a Shell is a watercolor adventure following Luo Zai, a little hermit crab who leaves its coastal home to discover an unfamiliar world. Across golden shores, coral gardens, crystal caverns and a sea of stars, the traveler collects shells, discovers new abilities and finds its own way home. A quiet journey about curiosity, vulnerability, adaptation and belonging, where every change of shell is a form of growth.") +'</p><p>Dalian, 2026</p>',[{text:'Back',fn:()=>closeDialog()}])}
@@ -499,7 +533,7 @@ function setupEntryGate(){
  sound.addEventListener('click',()=>{state.sound=!state.sound;try{localStorage.setItem('travelerSoundEnabled',state.sound?'1':'0')}catch{}syncSoundButtons();refresh()});
  full.addEventListener('click',async()=>{try{if(fullActive())await exit.call(document);else await request.call(document.documentElement)}catch{}refresh()});
  document.addEventListener('fullscreenchange',refresh);document.addEventListener('webkitfullscreenchange',refresh);mq.addEventListener?.('change',refresh);
- gate.addEventListener('submit',e=>{e.preventDefault();if(enter.disabled)return;enter.disabled=true;updateHomeLanguage();updateHud();app.inert=false;gate.classList.add('gate-depart');if(state.sound)primeAudio();else syncSoundButtons();setTimeout(()=>{gate.hidden=true;$('begin').focus?.()},650)});
+ gate.addEventListener('submit',e=>{e.preventDefault();if(enter.disabled)return;enter.disabled=true;updateHomeLanguage();updateHud();app.inert=false;gate.classList.add('gate-depart');if(state.sound)primeAudio();else syncSoundButtons();setTimeout(()=>{gate.hidden=true;if(new URLSearchParams(location.search).get('preview')==='chapter-end')showGoldenCompletion(true);else $('begin').focus?.()},650)});
  refresh();
 }
 
