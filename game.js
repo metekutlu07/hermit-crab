@@ -484,7 +484,17 @@ function showGoldenIntro(onStart){
   try{
    const row=document.createElement('div');row.className='story-shell-row';art.replaceChildren(row);
    const shells=await Promise.all(introShellNames.map((name,i)=>loadIntroArt(name).catch(()=>loadIntroArt(specimenFiles[i]))));
-   shells.forEach((im,i)=>{const cell=document.createElement('div');cell.className='story-shell-cell';im.classList.add('story-shell-reveal');im.style.animationDelay=(i*.45)+'s';cell.append(im);row.append(cell)});
+   shells.forEach((im,i)=>{
+    const cell=document.createElement('div');cell.className='story-shell-cell';
+    // Trim transparent margins so the wipe spans the visible specimen rather than empty pixels.
+    const canvas=document.createElement('canvas');canvas.width=im.naturalWidth;canvas.height=im.naturalHeight;
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});let specimen=im;
+    if(ctx){try{ctx.drawImage(im,0,0);const {data}=ctx.getImageData(0,0,canvas.width,canvas.height);let x0=canvas.width,y0=canvas.height,x1=-1,y1=-1;
+    for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){if(data[(y*canvas.width+x)*4+3]>24){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}}
+    if(x1>=x0&&y1>=y0){const crop=document.createElement('canvas');crop.width=x1-x0+1;crop.height=y1-y0+1;crop.getContext('2d').drawImage(canvas,x0,y0,crop.width,crop.height,0,0,crop.width,crop.height);specimen=crop}
+    }catch{}}
+    specimen.classList.add('story-specimen-wipe');specimen.style.animationDelay=(i*.36)+'s';cell.append(specimen);row.append(cell)
+   });
    const minimum=delay(3000);
    await Promise.all([minimum,...introNames.slice(1).map((name,i)=>jobs[i+1].catch(()=>loadIntroArt(name)).then(im=>{images[i+1]=im}))]);
    if(active)awaken();

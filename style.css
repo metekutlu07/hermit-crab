@@ -488,3 +488,10 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #overlay.story-intro .story-painting .story-crossfade{position:absolute;inset:0;opacity:0;transition:opacity .65s ease}
 #overlay.story-intro .story-painting .story-crossfade-visible{opacity:1}
 @media(prefers-reduced-motion:reduce){#overlay.story-intro .story-painting .story-crossfade{transition:none}#overlay.story-intro[data-story=loading] .story-shell-cell img{animation:none;clip-path:none}}
+
+/* Larger, tightly framed shell specimens with a visibly progressive upward wipe. */
+#overlay.story-intro[data-story=loading] .story-shell-row{left:1%;right:1%;gap:0;top:38%;height:23%}
+#overlay.story-intro[data-story=loading] .story-shell-cell{align-items:center;justify-content:center}
+#overlay.story-intro[data-story=loading] .story-shell-cell .story-specimen-wipe{display:block;width:100%;height:auto;max-height:100%;object-fit:contain;animation:storySpecimenWipe 1.4s linear both}
+@keyframes storySpecimenWipe{0%{clip-path:inset(100% 0 0 0)}100%{clip-path:inset(0 0 0 0)}}
+@media(prefers-reduced-motion:reduce){#overlay.story-intro[data-story=loading] .story-shell-cell .story-specimen-wipe{animation:none!important;clip-path:none}}
