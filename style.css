@@ -434,3 +434,27 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 /* Quiet watercolor paper sampled from the shell reference; seamless, no decorative objects. */
 #overlay.chapter-complete{background:#fce6cc url("data:image/webp;base64,UklGRgAEAABXRUJQVlA4IPQDAADwIQCdASogASABPpFIm0ylpCMioCnAsBIJaW6W/+3z52XtznZf1l7Nbn1//4H7pZf/T/3HFlwl8dB14xgff/r19/09YAoNRdn1CXmwWLhhGugHZoQTNMM7XH80iVSerRI1YmFWG98K4mu9MPnjOx2JLomrQ2LmuipyVYGWJRY0pB1ippjZC9nJV3AZA/sM4ZpvUSr1CroCX0Cam76B/dLyylXZkV20UR6KNeMPfZpa7/IPQcVz9+3hCABP8ucCC7Em9IDzKPyXfTUEuos8mXIzoJV0sR9xhP+528GuYNhTemoUO0ZQrulQatBbirH5LdYPmfJBdB8fjeWzV6+avJo0ghfBrIynl43ME0RGiTUlKJaPYhdhnSoAAP71Fbz3j9cd9t08n8CRbJiHqHwR/FDYHT4ny57H0n5SrzAdyCe4O/MwbWzDpzUGgsO4h+p1JGbccMIYOUrb2GzO7OXjtZJugh6hy9HFO1f6+1by4ysaOrw9Y07T4CqhZg6HQ+5l6ndMQvCywv9Y7vzBZ0m/4ryK8T5AiHfUcwu7xK4zc/kp1ODK4m6sF16VhGXgd1ORXYv/T7+7scVj5CB6z69dhy2s+4UuCIAYnQKAmnBZmQYc4hNYQlrJ3jrf8B0SXUTwo2bFbkpaZKdUOPApO4RRoMsDPeI0QzFwruk59awiaOaZhwsu4FdQBhdBldK6p+rL3dEy3OiuXFXwbtpgEQDuT/Q262sCQ3p5kAauSYU4/kpQTIdREGAedEJ6ULcuO8TvwqwLA2uUpR0r5B2cCd6LZcY8mxc6DOig9oG3crVzhm7E0y95VCD2xO58R4KfkeRlhzq29n+YLY4Q+3Inr6QCX45SzSbIsxJyr4UFzMUuRoBwBblMywCZhBXPhNqL6yYlHkpErGiDDzi/35qAQ201cI26hKUcVHGaSyGcN1ZUHlkN77d3GO0PmUV70wS/yO1XS8xZZIQI/AfgR3+sbW9cSggFZPZXtgo91wBWE/tTt/9e8Wt63SMjM26RKHPvIeGfhFLWSM05mqD3gvtL0nPcpTi64xgwB91lsYDDpfPfdG/fnLXs+KtLmaZ9qhcmmK2p1oHSNcR28TMkhDV8WOVx3L9UgbKqbvyaFAWcg0PXvfnfJldy4QpWrvYh90SDn8zFIfZDD64K4fwvJ/2koItMxebGfl6Weeb77hzaNAju7mNlwJGA5WO+dKEFSaeiMpDhBo//tom9MG0EOgrvRAelcY01a8erOjNKFOoyDrmZCrnuzDIV7h3eQXSvg/gZeyW1ZTRjljjZ9DOGuEZLJFTSUCFfk5rMu4YP1m1hwH7PT7TIViOro+1c4RQ2KmUHAzIeodv3AAAA") repeat 0 0 / 288px 288px}
 #overlay.chapter-complete .dialog{background:transparent}
+
+/* Golden Shores illustrated prologue */
+#overlay.story-intro{display:flex;position:absolute;inset:0;padding:0;background:#000;align-items:center;justify-content:center;backdrop-filter:none;-webkit-backdrop-filter:none;overflow:hidden;color:#784447}
+#overlay.story-intro .dialog{position:relative;display:block;box-sizing:border-box;width:min(100%,56.25dvh);height:100%;max-width:none;max-height:none;padding:0;margin:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:hidden;text-align:center;font-family:var(--graphic-font)}
+#overlay.story-intro #dialogBody{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0}
+#overlay.story-intro .story-painting{position:absolute;inset:0}
+#overlay.story-intro .story-painting img{width:100%;height:100%;object-fit:fill;display:block}
+#overlay.story-intro h2{position:absolute;z-index:2;top:18%;left:0;width:100%;margin:0;color:#fff;font:400 clamp(28px,5.2dvh,44px)/1.1 var(--graphic-font);text-shadow:none}
+#overlay.story-intro h2:empty{display:none}
+#overlay.story-intro .story-caption{position:absolute;z-index:1;top:57%;left:14%;right:14%;color:#784447}
+#overlay.story-intro .story-caption p{font:400 clamp(13px,2.15dvh,19px)/1.55 var(--graphic-font);margin:0;color:inherit;text-shadow:none}
+#overlay.story-intro #dialogButtons{position:absolute;z-index:3;top:73%;left:0;width:100%;display:flex;justify-content:center;margin:0;padding:0}
+#overlay.story-intro #dialogButtons button{font:400 clamp(13px,2dvh,17px)/1.3 var(--graphic-font);color:#784447;border:1px solid #784447;border-radius:0;background:transparent;padding:9px 32px;margin:0;min-height:40px;box-shadow:none;text-shadow:none;touch-action:manipulation}
+#overlay.story-intro #dialogButtons button:disabled{opacity:.4}
+#overlay.story-intro[data-story=loading] .story-caption{inset:0;pointer-events:none;color:#fff}
+#overlay.story-intro[data-story=loading] .story-chapter{position:absolute;top:25%;left:0;width:100%;font:400 12px/1.3 var(--graphic-font);letter-spacing:.2em}
+#overlay.story-intro[data-story=loading] .story-caption p{position:absolute;top:69%;left:0;width:100%;color:#fff;font-size:15px}
+#overlay.story-intro[data-story=loading] .story-painting{animation:storyReveal 1.7s ease both}
+.story-dots i{font-style:normal;animation:storyDot 1.2s infinite steps(1)}
+.story-dots i:nth-child(2){animation-delay:.25s}.story-dots i:nth-child(3){animation-delay:.5s}
+@keyframes storyDot{0%,25%{opacity:0}26%,100%{opacity:1}}
+@keyframes storyReveal{from{opacity:0}to{opacity:1}}
+@media(orientation:portrait){#overlay.story-intro .dialog{width:100%}}
+@media(prefers-reduced-motion:reduce){#overlay.story-intro *{animation:none!important}}

@@ -286,7 +286,7 @@ window.addEventListener('keydown',e=>{if(e.code==='KeyG'&&!e.repeat&&state.mode=
 document.addEventListener('contextmenu',e=>e.preventDefault());document.addEventListener('selectstart',e=>e.preventDefault());function mode(name){state.mode=name;if(name==='home')state.paused=false;$('home').classList.toggle('visible',name==='home');$('game').classList.toggle('visible',name==='game');if(name==='game'){resize();requestAnimationFrame(resize)}else clearHeld()}
 function initialCollection(ch){return CHAPTERS[ch].specimens.map((name,i)=>({x:ch*0+210+i*920+([0,90,200,0,60][i]),id:`${ch}-${i}`,name,got:!!state.collections[`${ch}-${i}`]}))}
 function enterChapter(ch,resetPosition=true){state.chapter=ch;resetGoldenAnimation();const C=CHAPTERS[ch];if(resetPosition){state.x=120;state.y=floorAt(ch,state.x)-1;state.ground=false;state.vx=0;state.vy=0;state.health=3;state.broken=false}clearHeld();state.vx=0;state.vy=0;jumps=0;state.checkpoint=110;state.picks=initialCollection(ch);state.paused=false;state.invincible=0;updateHud();mode('game');note(C.descs[0]+' · Explore and discover.',2700);save()}
-async function begin(){primeAudio();await waitForNewArt();if(state.mode!=='home')return;state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0);if(!testModule)showGoldenIntro()}
+async function begin(){primeAudio();if(state.mode!=='home'||goldenIntroBusy)return; if(testModule){await waitForNewArt();state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0);return}showGoldenIntro(async()=>{await waitForNewArt();state.collections={};state.available=['golden'];state.shell='golden';enterChapter(0)})}
 async function resume(){primeAudio();const s=safeGet();if(!s){begin();return}await waitForNewArt();if(state.mode!=='home')return;Object.assign(state,{available:s.available||['golden'],shell:s.shell||'golden',collections:s.collections||{},broken:!!s.broken,health:s.health||3});enterChapter(Math.max(0,Math.min(3,s.chapter||0)),false);let x=s.x||100;if(state.chapter===0){if(s.layout==='golden-v2'){const old=s.layoutWidths||[NEW_W,NEW_W,MW];let m=0,offset=0;while(m+1<old.length&&x>=offset+old[m]){offset+=old[m];m++}m=Math.min(m,moduleCount(0)-1);x=moduleStart(0,m)+(x-offset)*moduleWidth(0,m)/(old[m]||MW)}else if(newGolden)x=legacyX(0,x);}state.x=Math.max(100,Math.min(chapterWidth(state.chapter)-120,x));if(newGolden&&!hasSupport(state.x))state.x=safeSpawn(moduleAt(0,state.x));state.y=floorAt(state.chapter,state.x)-1;state.ground=false;state.health=Math.max(1,state.health);makePickups();updateHud();save()}
 function shellGlyph(kind){const glyphs={golden:'<path d="M12 20C7 20 3 16 3 11a9 9 0 0 1 18 0c0 5-4 9-9 9zM12 15a4 4 0 1 0-4-4c0 3 3 5 6 4"/>',spring:'<path d="M5 19h14L12 3 5 19zM8 12h8m-6-5h4m-7 9h10"/>',heavy:'<path d="M4 15 7 6l7-3 7 7-3 10H8zM7 6l7 7 4 7m-4-7 7-3M4 15l10-2"/>',float:'<ellipse cx="12" cy="12" rx="8" ry="10" transform="rotate(30 12 12)"/><path d="M8 14c-1-3 1-6 4-7"/>'};return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">'+glyphs[kind]+'</svg>'}
 function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textContent=tr(C.title);$('chapterName').textContent=tr(C.name);const n=C.specimens.filter((_,i)=>state.collections[`${state.chapter}-${i}`]).length;$('collectedCount').textContent=n;$('statusLeft').setAttribute('aria-label',state.health+' of 3 lives');$('hearts').textContent=state.health;const slots=$('shellSlots');slots.innerHTML='';slots.hidden=state.available.length<=1;for(const kind of state.available){const b=document.createElement('button');b.className='shell-choice'+(state.shell===kind?' selected':'');b.dataset.kind=kind;b.setAttribute('aria-label',SHELLS[kind].name+' Shell');b.title=SHELLS[kind].ability;b.setAttribute('aria-pressed',String(state.shell===kind));b.innerHTML=shellGlyph(kind);b.addEventListener('click',()=>equip(kind));slots.append(b)}}
@@ -392,10 +392,51 @@ function finishChapter(){state.paused=true;clearHeld();const C=CHAPTERS[state.ch
 const next=CHAPTERS[state.chapter+1];showDialog(`${C.name} · Complete`,`<p>You reached the end of this chapter.</p><p>Continue into <strong>${next.name}</strong>?</p>`,[{text:`Enter ${next.name}`,fn:()=>{closeDialog();enterChapter(state.chapter+1)}},{text:'Home',fn:()=>{closeDialog();mode('home')}}])}
 const birdArt=img('golden-shores-bird.png');
 let birdEvent=null,birdDone=new Set();
-function showGoldenIntro(){
- state.chapterIntro=true;$('message').classList.remove('show');
- const body=gameLanguage==='zh'?'<p>第一章</p><p>夕阳沉入海面，小小旅人苏醒了。是时候离开家，沿着海岸寻找新的贝壳。</p><p>飞鸟靠近时，躲进你的壳中，直到危险远去。</p><p>第一只壳 · 庇护</p>':'<p>CHAPTER I</p><p>As the sun sinks into the ocean, a little traveler awakens. It is time to leave home and search for new shells along the shore.</p><p>When birds approach, retreat into your shell until danger passes.</p><p>First shell · Shelter</p>';
- showDialog('Golden Shores',body,[{text:'Begin Exploration',fn:()=>{primeAudio();closeDialog()}}]);$('overlay').classList.add('chapter-intro');
+let goldenIntroBusy=false;
+function showGoldenIntro(onStart){
+ if(goldenIntroBusy)return;
+ goldenIntroBusy=true;state.chapterIntro=true;state.paused=true;clearHeld();$('message').classList.remove('show');
+ const zh=gameLanguage==='zh', overlay=$('overlay'),body=$('dialogBody'),buttons=$('dialogButtons'),heading=$('dialogTitle');
+ overlay.classList.remove('chapter-intro','chapter-complete');overlay.querySelector('.completion-kicker')?.remove();
+ overlay.classList.add('story-intro','visible');overlay.setAttribute('aria-hidden','false');
+ const filenames=['intro-loading.jpeg','wake01.jpeg','wake02.jpeg','wake03.jpeg','wake04.jpeg','intro-bird.jpeg'];
+ const images=filenames.map(name=>{const im=new Image();im.alt='';im.draggable=false;im.src=assetURL(name);return im});
+ const ready=Promise.all(images.map(im=>new Promise(resolve=>{if(im.complete){resolve(im.naturalWidth>0);return}im.onload=()=>resolve(true);im.onerror=()=>resolve(false)})));
+ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ let active=true;
+ function button(label,action){buttons.innerHTML='';const el=document.createElement('button');el.textContent=label;el.onclick=action;buttons.append(el);return el}
+ function scene(type,im,words){
+  overlay.dataset.story=type;heading.textContent=type==='loading'?(zh?'金色海岸':'Golden Shores'):'';
+  body.innerHTML='';buttons.innerHTML='';
+  const art=document.createElement('div');art.className='story-painting';art.append(im);body.append(art);
+  const caption=document.createElement('div');caption.className='story-caption';body.append(caption);
+  if(type==='loading'){const chapter=document.createElement('small');chapter.className='story-chapter';chapter.textContent=zh?'第一章':'CHAPTER I';caption.append(chapter)}
+  const p=document.createElement('p');p.textContent=words;caption.append(p);
+  return art;
+ }
+ async function start(){
+  if(!active)return;active=false;buttons.querySelector('button')?.setAttribute('disabled','');primeAudio();
+  try{if(onStart)await onStart()}finally{goldenIntroBusy=false;overlay.classList.remove('story-intro');delete overlay.dataset.story;closeDialog()}
+ }
+ function bird(){
+  scene('bird',images[5],zh?'飞鸟靠近时，躲进你的壳中，直到危险远去。':'When birds approach, retreat into your shell until danger passes.');
+  button(zh?'开始':'Start',start);
+ }
+ async function awaken(){
+  const art=scene('wake',images[1],zh?'夕阳沉入海面，小小旅人苏醒了。是时候离开家，沿着海岸寻找新的贝壳。':'As the sun sinks into the ocean, a little traveler awakens. It is time to leave home and search for new shells along the shore.');
+  const next=button(zh?'下一页':'Next',bird);next.disabled=true;
+  if(!reduced){for(const [i,ms] of [[2,1200],[3,800],[4,800]]){await delay(ms);if(overlay.dataset.story!=='wake')return;art.replaceChildren(images[i])}}else art.replaceChildren(images[4]);
+  next.disabled=false;
+ }
+ scene('loading',images[0],zh?'加载中':'Loading');const dots=document.createElement('span');dots.className='story-dots';dots.innerHTML='<i>.</i><i>.</i><i>.</i>';body.querySelector('p').append(dots);
+ Promise.all([delay(3000),Promise.race([ready,delay(12000).then(()=>null)])]).then(([,ok])=>{
+  if(!active)return;
+  if(ok&&ok.every(Boolean)){awaken();return}
+  // Missing art must never block entry into the game.
+  overlay.classList.remove('story-intro');delete overlay.dataset.story;
+  showDialog('Golden Shores',zh?'<p>夕阳沉入海面，小小旅人苏醒了。是时候离开家，沿着海岸寻找新的贝壳。</p><p>飞鸟靠近时，躲进你的壳中，直到危险远去。</p>':'<p>As the sun sinks into the ocean, a little traveler awakens. It is time to leave home and search for new shells along the shore.</p><p>When birds approach, retreat into your shell until danger passes.</p>',[{text:'Begin Exploration',fn:start}]);overlay.classList.add('chapter-intro');
+ });
 }
 function updateBird(dt){
  if(!newGolden||state.chapter!==0||testModule||!imageReady(birdArt))return;
