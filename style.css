@@ -474,3 +474,17 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #overlay.story-intro:not([data-story=loading]) #dialogButtons{top:77%}
 #overlay.story-intro:not([data-story=loading]) #dialogButtons button{color:#C65E58;border-color:#C65E58}
 @media(prefers-reduced-motion:reduce){#overlay.story-intro .dialog,#overlay.story-intro .story-caption,#overlay.story-intro #dialogButtons{transition:none!important}}
+
+/* Paper specimen loader and continuous painted scene transition */
+#overlay.story-intro[data-story=loading]{background:#fce6cc url("data:image/webp;base64,UklGRgAEAABXRUJQVlA4IPQDAADwIQCdASogASABPpFIm0ylpCMioCnAsBIJaW6W/+3z52XtznZf1l7Nbn1//4H7pZf/T/3HFlwl8dB14xgff/r19/09YAoNRdn1CXmwWLhhGugHZoQTNMM7XH80iVSerRI1YmFWG98K4mu9MPnjOx2JLomrQ2LmuipyVYGWJRY0pB1ippjZC9nJV3AZA/sM4ZpvUSr1CroCX0Cam76B/dLyylXZkV20UR6KNeMPfZpa7/IPQcVz9+3hCABP8ucCC7Em9IDzKPyXfTUEuos8mXIzoJV0sR9xhP+528GuYNhTemoUO0ZQrulQatBbirH5LdYPmfJBdB8fjeWzV6+avJo0ghfBrIynl43ME0RGiTUlKJaPYhdhnSoAAP71Fbz3j9cd9t08n8CRbJiHqHwR/FDYHT4ny57H0n5SrzAdyCe4O/MwbWzDpzUGgsO4h+p1JGbccMIYOUrb2GzO7OXjtZJugh6hy9HFO1f6+1by4ysaOrw9Y07T4CqhZg6HQ+5l6ndMQvCywv9Y7vzBZ0m/4ryK8T5AiHfUcwu7xK4zc/kp1ODK4m6sF16VhGXgd1ORXYv/T7+7scVj5CB6z69dhy2s+4UuCIAYnQKAmnBZmQYc4hNYQlrJ3jrf8B0SXUTwo2bFbkpaZKdUOPApO4RRoMsDPeI0QzFwruk59awiaOaZhwsu4FdQBhdBldK6p+rL3dEy3OiuXFXwbtpgEQDuT/Q262sCQ3p5kAauSYU4/kpQTIdREGAedEJ6ULcuO8TvwqwLA2uUpR0r5B2cCd6LZcY8mxc6DOig9oG3crVzhm7E0y95VCD2xO58R4KfkeRlhzq29n+YLY4Q+3Inr6QCX45SzSbIsxJyr4UFzMUuRoBwBblMywCZhBXPhNqL6yYlHkpErGiDDzi/35qAQ201cI26hKUcVHGaSyGcN1ZUHlkN77d3GO0PmUV70wS/yO1XS8xZZIQI/AfgR3+sbW9cSggFZPZXtgo91wBWE/tTt/9e8Wt63SMjM26RKHPvIeGfhFLWSM05mqD3gvtL0nPcpTi64xgwB91lsYDDpfPfdG/fnLXs+KtLmaZ9qhcmmK2p1oHSNcR28TMkhDV8WOVx3L9UgbKqbvyaFAWcg0PXvfnfJldy4QpWrvYh90SDn8zFIfZDD64K4fwvJ/2koItMxebGfl6Weeb77hzaNAju7mNlwJGA5WO+dKEFSaeiMpDhBo//tom9MG0EOgrvRAelcY01a8erOjNKFOoyDrmZCrnuzDIV7h3eQXSvg/gZeyW1ZTRjljjZ9DOGuEZLJFTSUCFfk5rMu4YP1m1hwH7PT7TIViOro+1c4RQ2KmUHAzIeodv3AAAA") repeat 0 0 / 288px 288px}
+#overlay.story-intro[data-story=loading] h2,#overlay.story-intro[data-story=loading] .story-caption,#overlay.story-intro[data-story=loading] .story-caption p{color:#806087}
+#overlay.story-intro[data-story=loading] .story-shell-row{position:absolute;left:6%;right:6%;top:39%;height:20%;display:flex;align-items:center;justify-content:center;gap:2%}
+#overlay.story-intro[data-story=loading] .story-shell-cell{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;height:100%}
+#overlay.story-intro[data-story=loading] .story-shell-cell img{width:100%;height:100%;object-fit:contain;animation:storyShellFill 1.1s linear both}
+#overlay.story-intro[data-story=loading] .story-caption p{top:65%}
+#overlay.story-intro:not([data-story=loading]) .story-caption{color:#806087}
+#overlay.story-intro:not([data-story=loading]) #dialogButtons button{color:#806087;border-color:#806087}
+#overlay.story-intro[data-story=bird] .story-caption{top:66%}
+#overlay.story-intro .story-painting .story-crossfade{position:absolute;inset:0;opacity:0;transition:opacity .65s ease}
+#overlay.story-intro .story-painting .story-crossfade-visible{opacity:1}
+@media(prefers-reduced-motion:reduce){#overlay.story-intro .story-painting .story-crossfade{transition:none}#overlay.story-intro[data-story=loading] .story-shell-cell img{animation:none;clip-path:none}}

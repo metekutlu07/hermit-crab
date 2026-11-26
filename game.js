@@ -393,7 +393,8 @@ const next=CHAPTERS[state.chapter+1];showDialog(`${C.name} · Complete`,`<p>You 
 const birdArt=img('golden-shores-bird.png');
 let birdEvent=null,birdDone=new Set();
 let goldenIntroBusy=false;
-const introNames=['intro-loading.jpeg','wake01.jpeg','wake02.jpeg','wake03.jpeg','wake04.jpeg','intro-bird.jpeg'];
+const introNames=[null,'wake01.jpeg','wake02.jpeg','wake03.jpeg','wake04.jpeg','intro-bird.jpeg'];
+const introShellNames=specimenFiles.map(f=>f.replace('.png','-painted.png'));
 const introCache=new Map();
 function loadIntroArt(name){
  if(introCache.has(name))return introCache.get(name);
@@ -406,7 +407,7 @@ function loadIntroArt(name){
  return promise;
 }
 // Warm the small loading illustration before the player presses Begin Journey.
-loadIntroArt(introNames[0]).catch(()=>{});
+introShellNames.forEach(name=>loadIntroArt(name).catch(()=>{}));
 
 function showGoldenIntro(onStart){
  if(goldenIntroBusy)return;
@@ -415,7 +416,7 @@ function showGoldenIntro(onStart){
  overlay.classList.remove('chapter-intro','chapter-complete');overlay.querySelector('.completion-kicker')?.remove();
  overlay.classList.add('story-intro','visible');overlay.setAttribute('aria-hidden','false');
  const images=[];
- const jobs=introNames.map((name,i)=>loadIntroArt(name).then(im=>{images[i]=im;return im}));
+ const jobs=introNames.map((name,i)=>name?loadIntroArt(name).then(im=>{images[i]=im;return im}):Promise.resolve(null));
  jobs.forEach(job=>job.catch(()=>{}));
  const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -451,11 +452,17 @@ function showGoldenIntro(onStart){
  async function bird(){
   if(!active||overlay.dataset.story!=='wake')return;
   const next=buttons.querySelector('button');if(next.disabled)return;next.disabled=true;
-  await fadeOut();
+  const dialog=overlay.querySelector('.dialog'),art=body.querySelector('.story-painting');
+  dialog.classList.add('story-ui-hidden');
+  const incoming=images[5];incoming.classList.add('story-crossfade');art.append(incoming);
+  incoming.getBoundingClientRect();incoming.classList.add('story-crossfade-visible');
+  await delay(fadeMs);
   if(!active)return;
-  scene('bird',images[5],zh?'飞鸟靠近时，躲进你的壳中，直到危险远去。':'When birds approach, retreat into your shell until danger passes.');
+  incoming.classList.remove('story-crossfade','story-crossfade-visible');
+  scene('bird',incoming,zh?'飞鸟靠近时，躲进你的壳中，直到危险远去。':'When birds approach, retreat into your shell until danger passes.');
   const startButton=button(zh?'开始':'Start',start);startButton.disabled=true;
-  revealScene();await delay(fadeMs);startButton.disabled=false;
+  dialog.getBoundingClientRect();dialog.classList.remove('story-ui-hidden');
+  await delay(fadeMs);startButton.disabled=false;
  }
  async function awaken(){
   await fadeOut();
@@ -475,10 +482,9 @@ function showGoldenIntro(onStart){
  const dots=document.createElement('span');dots.className='story-dots';dots.innerHTML='<i>.</i><i>.</i><i>.</i>';body.querySelector('p').append(dots);
  async function runLoading(){
   try{
-   const shell=await jobs[0].catch(()=>loadIntroArt(introNames[0]));
-   art.replaceChildren(shell);
-   shell.classList.add('story-shell-reveal');
-   // The timer starts only once the shell is decoded and visible.
+   const row=document.createElement('div');row.className='story-shell-row';art.replaceChildren(row);
+   const shells=await Promise.all(introShellNames.map((name,i)=>loadIntroArt(name).catch(()=>loadIntroArt(specimenFiles[i]))));
+   shells.forEach((im,i)=>{const cell=document.createElement('div');cell.className='story-shell-cell';im.classList.add('story-shell-reveal');im.style.animationDelay=(i*.45)+'s';cell.append(im);row.append(cell)});
    const minimum=delay(3000);
    await Promise.all([minimum,...introNames.slice(1).map((name,i)=>jobs[i+1].catch(()=>loadIntroArt(name)).then(im=>{images[i+1]=im}))]);
    if(active)awaken();
