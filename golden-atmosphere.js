@@ -141,76 +141,63 @@ function floatSpores(ctx,m,t){
  ctx.globalAlpha=1;
 }
 // Individual pollen: screen-crossing wind currents, with independent soft motion.
-const pollen={items:[],t:null,cam:0,w:0,h:0,next:0,serial:0};
-const layers=[
- {size:[.024,.036],speed:[.022,.040],parallax:.09},
- {size:[.031,.063],speed:[.038,.072],parallax:.20},
- {size:[.064,.077],speed:[.055,.090],parallax:.35}
-];
+// Persistent world-space field. All positions are expressed in units of landscape height,
+// never screen pixels. The camera is used only when projecting positions for drawing.
+const pollen={items:[],t:null,cam:0,start:null,end:null};
+const layers=[{size:[.024,.036],speed:.026},{size:[.031,.063],speed:.043},{size:[.064,.077],speed:.058}];
 const between=(a,b,r)=>a+(b-a)*r;
-function emit(m,W,H,seeded=false,seam=-Infinity,seedX=null){
- const d=density[m]||0;if(!d)return;
- const max=W<H?9:16;
- const free=max-pollen.items.length;if(free<=0)return;
- const seed=++pollen.serial*37+m*971;
- const r=i=>rand(seed+i*11);
- const layer=r(1)<.35?0:r(1)<.78?1:2;
- const count=Math.min(free,seedX!==null?1:r(2)<.84?1:2);
- const L=layers[layer],cy=H*between(.12,.41,r(4)),cx=seedX!==null?seedX:seeded?Math.max(seam+H*.12,W*between(.25,.95,r(5))):Math.max(W+H*.10,seam+H*.12);
- const common=between(...L.speed,r(6))*H,phi=r(7)*Math.PI*2, family=Math.floor(r(8)*pollenFamilies.length);
- for(let k=0;k<count;k++){
-  const n=seed+k*73,q=i=>rand(n+i*17);
-  const size=H*Math.max(.024,between(...L.size,q(1))*(layer===2?1:k===0?1:k===1?.68:.48));
-  const choices=pollenFamilies[family],art=choices[Math.floor(q(3)*choices.length)];
-  pollen.items.push({layer,art,family,size,x:cx+k*H*.037+H*(q(4)-.5)*.025,y:cy+H*(q(5)-.5)*.09,
-   age:seeded?1.7:q(6)*.45,life:Math.max(22,(W+H*.4)/common*1.8),
-   vx:common*between(.79,1.23,q(7)),vy:H*between(-.013,.011,q(8)),
-   phase:q(9)*Math.PI*2,phi,rate:between(.38,.86,q(10)),rotation:q(11)*Math.PI*2,
-   spin:between(.035,.11,q(12))*(q(13)<.5?-1:1),rock:between(.24,.57,q(14))});
+function populate(start,end){
+ const items=[],spacing=.39;
+ for(let lane=0;lane<3;lane++){
+  let j=0;
+  for(let x=start+.09+lane*spacing/3;x<end+.28;x+=spacing){
+   const seed=lane*100003+j++*173+81,r=i=>rand(seed+i*17);
+   const layer=r(1)<.35?0:r(1)<.78?1:2,L=layers[layer];
+   const size=between(...L.size,r(2)),choices=pollenFamilies[Math.floor(r(3)*pollenFamilies.length)];
+   const low=.07+size*.72,high=.5-size*.72;
+   const y=low+(high-low)*((lane+.15+.70*r(4))/3);
+   items.push({layer,size,art:choices[Math.floor(r(5)*choices.length)],x:x+(r(6)-.5)*.065,y,
+    vx:L.speed*between(.91,1.09,r(7)),phase:r(8)*Math.PI*2,phi:r(9)*Math.PI*2,rate:between(.38,.86,r(10)),
+    rotation:r(11)*Math.PI*2,spin:between(.035,.11,r(12))*(r(13)<.5?-1:1),rock:between(.24,.57,r(14)),age:0});
+  }
  }
+ return items;
 }
-function tick(m,W,H,t,cam,seam=-Infinity){
- if(mode==='off'||reduced||!ready()||!W||!H)return;
- const p=pollen;
- // Introduce particles offscreen before the beach enters view, never at the scene switch.
- const nearBeach=m===0&&seam<W+H*.55,zone=m===0?(nearBeach?1:0):m,d=density[zone]||0;
- const reset=p.t===null||t<p.t||t-p.t>1||Math.abs(W-p.w)>2||Math.abs(H-p.h)>2||Math.abs(cam-p.cam)>H*1.5;
- if(reset){p.items=[];p.t=t;p.cam=cam;p.w=W;p.h=H;p.next=t;if(d&&m>0){const n=W<H?4:7;for(let i=0;i<n;i++)emit(zone,W,H,true,seam,W*(i+.5)/n)}}
- const dt=Math.min(.055,Math.max(0,t-p.t)),dc=cam-p.cam;p.t=t;p.cam=cam;
- const windPulse=.74+.26*Math.sin(t*.21+m*.8);
- if(d&&t>=p.next){
-  // Maintain a quiet, evenly spaced stream; replenish just outside the viewport.
-  const entry=Math.max(W+H*.10,seam+H*.12);
-  const nearEntry=p.items.some(q=>Math.abs(q.x-entry)<H*.12);
-  if(!nearEntry)emit(zone,W,H,false,seam);
-  p.next=t+between(1.3,2.1,rand(p.serial*59+zone*11));
- }else if(!d){p.next=t}
+function tick(m,W,H,t,cam,seam,total){
+ if(mode==='off'||reduced||!ready()||!W||!H||!Number.isFinite(total))return;
+ const p=pollen,start=(seam+cam)/H,end=total/H,view=cam/H,viewRight=view+W/H;
+ if(p.start===null||Math.abs(p.start-start)>.02||Math.abs(p.end-end)>.02){
+  p.items=populate(start,end);p.start=start;p.end=end;p.t=t;
+ }
+ const dt=p.t===null||t<p.t?0:Math.min(.055,Math.max(0,t-p.t));p.t=t;p.cam=cam;
+ const windPulse=.80+.20*Math.sin(t*.21);
  for(const q of p.items){
   q.age+=dt;
-  const gust=1+.32*Math.sin(t*.38+q.phi)+.19*Math.sin(t*.93+q.phase);
-  const flutter=Math.sin(q.age*q.rate+q.phase);
-  q.x-=q.vx*windPulse*gust*dt+dc*(m===0?1:layers[q.layer].parallax);
-  q.x+=H*.018*Math.sin(q.age*1.15+q.phase)*dt;
-  const low=H*.07+q.size*.72,high=H*.5-q.size*.72;
-  let vy=q.vy+H*(.034*flutter+.014*Math.sin(q.age*1.3+q.phase*.7));
-  const margin=H*.09;if(vy>0)vy*=smooth((high-q.y)/margin);else vy*=smooth((q.y-low)/margin);
-  q.y=Math.max(low,Math.min(high,q.y+vy*dt));
-  q.rotation+=q.spin*dt;
+  const gust=1+.24*Math.sin(t*.38+q.phi)+.12*Math.sin(t*.93+q.phase);
+  q.x-=q.vx*windPulse*gust*dt;
+  q.x+=.008*Math.sin(q.age*1.15+q.phase)*dt;
+  const low=.07+q.size*.72,high=.5-q.size*.72;
+  let vy=.025*Math.sin(q.age*q.rate+q.phase)+.011*Math.sin(q.age*1.3+q.phase*.7);
+  const margin=.09;if(vy>0)vy*=smooth((high-q.y)/margin);else vy*=smooth((q.y-low)/margin);
+  q.y=Math.max(low,Math.min(high,q.y+vy*dt));q.rotation+=q.spin*dt;
+  // Recycle only outside the camera view. No visible pop on crossing a module boundary.
+  if(q.x<start-.28&&(q.x+q.size<view||q.x-q.size>viewRight)){
+   const destination=end+.30+(q.x-(start-.28));
+   if(destination-q.size>viewRight||destination+q.size<view)q.x=destination;
+  }
  }
- p.items=p.items.filter(q=>q.x> -q.size*1.3&&q.x<W+H*.95);
- // When moving backwards, supply particles from the left edge, not the visible interior.
- if(d&&m>0&&dc<-.5&&p.items.length<(W<H?4:7)&&!p.items.some(q=>q.x<H*.06))emit(zone,W,H,false,seam,-H*.12);
 }
 function drawPollen(ctx,front,W,H){
  if(mode==='off'||reduced||!ready())return;
- for(const q of pollen.items.slice().sort((a,b)=>a.size-b.size)){
-  if((q.size>H*.036)!==front||q.x+q.size<0||q.x-q.size>W)continue;
-  const size=q.size;
-  ctx.save();ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.translate(q.x,q.y);ctx.rotate(q.rotation+q.rock*Math.sin(q.age*.64+q.phase)+.12*Math.sin(q.age*1.31+q.phi));
+ for(const q of pollen.items){
+  if((q.size>.036)!==front)continue;
+  const x=q.x*H-pollen.cam,y=q.y*H,size=q.size*H;
+  if(x+size<0||x-size>W)continue;
+  ctx.save();ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.translate(x,y);ctx.rotate(q.rotation+q.rock*Math.sin(q.age*.64+q.phase)+.12*Math.sin(q.age*1.31+q.phi));
   ctx.drawImage(atlas,q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
  }
 }
-function pollenReset(){pollen.t=null;pollen.items=[]}
+function pollenReset(){pollen.t=null;pollen.items=[];pollen.start=null;pollen.end=null}
 function distantBirds(ctx,m,t){
  if(!birdScenes.has(m))return;
  // Infrequent silhouettes, well above the horizon, distinct from the large predator.

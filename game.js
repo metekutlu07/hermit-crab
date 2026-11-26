@@ -77,6 +77,36 @@ function updateAtmosphere(){
 }
 function safeGet(){try{return JSON.parse(localStorage.getItem('travelerShellSave')||'null')}catch{return null}}
 function save(){if(testModule)return;try{localStorage.setItem('travelerShellSave',JSON.stringify({chapter:state.chapter,x:state.x,layout:newGolden&&state.chapter===0?'golden-v2':'legacy',layoutWidths:newGolden&&state.chapter===0?[...newWidths]:null,health:state.health,available:state.available,shell:state.shell,collections:state.collections,broken:state.broken}))}catch{}}
+// A quiet, unpitched take-off gesture: a little breath and sand/shell texture.
+let jumpAudioCache=null,jumpAudioIndex=0;
+function jumpSound(){
+ if(!state.sound||!audio||audio.state!=='running')return;
+ try{
+  const c=audio;
+  if(!jumpAudioCache||jumpAudioCache.ctx!==c){
+   const buffers=[];
+   for(let k=0;k<3;k++){
+    const duration=.22+k*.018,len=Math.ceil(c.sampleRate*duration),buf=c.createBuffer(1,len,c.sampleRate),d=buf.getChannelData(0);
+    let seed=3317+k*163,low=0,slow=0;
+    for(let i=0;i<len;i++){
+     seed=(Math.imul(seed,1664525)+1013904223)>>>0;const white=seed/4294967296*2-1;
+     low+=.19*(white-low);slow+=.035*(low-slow);
+     const t=i/c.sampleRate,u=t/duration;
+     const breath=Math.sin(Math.PI*u)**2*(1-u*.45);
+     const grains=Math.exp(-t*37)*(1-Math.exp(-t*260));
+     d[i]=(low-slow)*breath*.85+low*grains*.20;
+    }
+    buffers.push(buf);
+   }
+   jumpAudioCache={ctx:c,buffers};
+  }
+  const source=c.createBufferSource(),filter=c.createBiquadFilter(),gain=c.createGain();
+  source.buffer=jumpAudioCache.buffers[jumpAudioIndex++%3];
+  filter.type='lowpass';filter.frequency.value=1650;filter.Q.value=.45;
+  gain.gain.value=.18;source.connect(filter);filter.connect(gain);gain.connect(c.destination);
+  source.start();source.onended=()=>{try{source.disconnect();filter.disconnect();gain.disconnect()}catch{}};
+ }catch{}
+}
 function tone(freq=660){if(!state.sound)return;try{audio=audio||new(window.AudioContext||window.webkitAudioContext)();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(freq*1.25,audio.currentTime+.1);g.gain.setValueAtTime(.07,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.22);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.24)}catch{}}
 function assetURL(url){return (window.TRAVEL_ASSETS&&window.TRAVEL_ASSETS[url])||A+url}function img(url){const i=new Image();i.src=assetURL(url);return i}
 for(const c of CHAPTERS)for(let m=0;m<3;m++)assets[`${c.key}-${m}`]=img(`${c.key}-${m+1}.jpg`);
@@ -319,7 +349,7 @@ const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space
 window.addEventListener('keydown',e=>{if(!playable())return;const a=KEYMAP[e.code];if(!a)return;e.preventDefault();if(a==='jump'){if(!e.repeat){heldKeys.set(e.code,a);syncHeld();jump()}}else{heldKeys.set(e.code,a);syncHeld()}});
 window.addEventListener('keyup',e=>{if(heldKeys.delete(e.code))syncHeld()});
 let jumps=0;
-function jump(){if(state.mode!=='game'||state.paused||controls.hide)return;const direction=(+!!controls.right)-(+!!controls.left);if(state.ground){if(direction)state.vx=direction*(state.shell==='heavy'?215:newGolden?415:350);state.vy=newGolden?-940:-730;state.ground=false;jumps=1;tone(520)}else if(state.shell==='spring'&&jumps<2){state.vy=-670;jumps=2;tone(700)}}
+function jump(){if(state.mode!=='game'||state.paused||controls.hide)return;const direction=(+!!controls.right)-(+!!controls.left);if(state.ground){if(direction)state.vx=direction*(state.shell==='heavy'?215:newGolden?415:350);state.vy=newGolden?-940:-730;state.ground=false;jumps=1;jumpSound()}else if(state.shell==='spring'&&jumps<2){state.vy=-670;jumps=2;jumpSound()}}
 function groundSegments(ch){let seg=[];for(let m=0;m<3;m++){const left=m*MW,right=(m+1)*MW,C=CHAPTERS[ch];if(ch===3&&m===1){seg.push([left,left+370,C.floor],[left+1320,right,C.floor]);for(let [a,b,y] of C.platforms[m])seg.push([left+a,left+b,y])}else if(ch===0&&m===1){seg.push([left,left+585,C.floor],[left+760,right,C.floor]);seg.push([left+585,left+760,C.floor-72])}else{seg.push([left,right,C.floor])}for(let [a,b,y] of C.platforms[m]){if(ch===3&&m===1)continue;seg.push([left+a,left+b,y])}}return seg}
 let segments=CHAPTERS.map((_,i)=>groundSegments(i));
 function breakWall(){if(state.broken)return;state.broken=true;state.vx=135;tone(290);note('The granite shell fractures the ancient stone!',2500);save()}
@@ -401,7 +431,7 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  cx.save();cx.clearRect(0,0,W,H);cx.fillStyle=C.palette;cx.fillRect(0,0,W,H);
  const camera=Math.max(0,Math.min(chapterWidth(state.chapter)-W/S,state.x-W/S*.40));state.cam=camera;
  for(let m=0;m<moduleCount(state.chapter);m++){const width=moduleWidth(state.chapter,m),ox=(moduleStart(state.chapter,m)-camera)*S;if(ox>W+2||ox+width*S<0)continue;const im=assets[newGolden&&newModule[m]?`golden-new-${m}`:`${C.key}-${m}`];if(im.complete&&im.naturalWidth){cx.drawImage(im,ox,state.originY,width*S,MH*S);if(newGolden&&newModule[m]&&state.chapter===0)window.GoldenAtmosphere?.draw(cx,im,m,ox,state.originY,width*S,MH*S,state.anim,W,!!birdEvent)}}
- if(newGolden&&state.chapter===0&&!terrainDebug){window.GoldenAtmosphere?.tick(moduleAt(0,state.x),W,H,state.anim,camera*S,(moduleStart(0,1)-camera)*S);window.GoldenAtmosphere?.drawPollen(cx,false,W,H)}
+ if(newGolden&&state.chapter===0&&!terrainDebug){window.GoldenAtmosphere?.tick(moduleAt(0,state.x),W,H,state.anim,camera*S,(moduleStart(0,1)-camera)*S,chapterWidth(0)*S);window.GoldenAtmosphere?.drawPollen(cx,false,W,H)}
  cx.save();cx.translate(-camera*S,state.originY);cx.scale(S,S);
  if(terrainDebug){cx.save();cx.lineWidth=3;const stroke=(lines,color,closed=false)=>{cx.strokeStyle=color;for(const l of lines){cx.beginPath();l.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));if(closed){cx.closePath();cx.fillStyle='rgba(75,195,255,.20)';cx.fill()}cx.stroke()}};
  if(newGolden){stroke(goldenGround,'#72ffac');stroke(goldenPlatforms,'#ffd56a');stroke(goldenWalls,'#ff657b');stroke(goldenHazards,'#63cbff',true)}else stroke(segments[state.chapter].map(([a,b,y])=>[[a,y],[b,y]]),'#72ffac');cx.restore()}
