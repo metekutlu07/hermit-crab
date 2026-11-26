@@ -32,7 +32,7 @@ const ready=()=>atlas.complete&&atlas.naturalWidth===640&&atlas.naturalHeight===
 const pollenFamilies=[[1,4,10],[3,6]];
 const birdScenes=new Set([0,1,3,5,8,10]);
 const mistScenes=new Set([0,1,3,5,8]);
-const shimmerScenes=new Set([0,1,2,5,7,8,10]);
+const shimmerScenes=new Set([0,1,2,3,4,5,7,8,9,10]);
 const rand=(n)=>{const x=Math.sin(n*127.1+311.7)*43758.5453123;return x-Math.floor(x)};
 function bounds(p){return [Math.min(...p.map(a=>a[0])),Math.min(...p.map(a=>a[1])),Math.max(...p.map(a=>a[0])),Math.max(...p.map(a=>a[1]))]}
 function clip(ctx,p){ctx.beginPath();p.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip()}
@@ -42,13 +42,13 @@ function shimmer(ctx,a,t,warm){
  ctx.save();clip(ctx,a.p);
  for(const g of a.glints){
   const phase=t*Math.PI*2/g.period+g.phase;
-  const pulse=Math.pow(.5+.5*Math.sin(phase),1.6);
+  const pulse=Math.pow(.5+.5*Math.sin(phase),1.8);
   if(pulse<.05)continue;
-  const x=g.x+Math.sin(phase*.5)*g.drift,y=g.y+Math.sin(phase)*.8,l=g.length*(.8+pulse*.2);
-  ctx.globalAlpha=Math.min(.66,(warm?.55:.46)*pulse*Math.min(intensity,1.15));
-  const grad=ctx.createLinearGradient(x-l/2,y,x+l/2,y);const color=warm?'255,221,157':'232,240,235';
+  const x=g.x+Math.sin(phase*.5)*g.drift,y=g.y+Math.sin(phase)*1.2,l=g.length*(warm?1.65:1.20)*(.45+.55*pulse);
+  ctx.globalAlpha=Math.min(.86,(warm?.82:.64)*pulse*Math.min(intensity,1.15));
+  const grad=ctx.createLinearGradient(x-l/2,y,x+l/2,y);const color=warm?'255,239,190':'236,240,239';
   grad.addColorStop(0,'rgba('+color+',0)');grad.addColorStop(.5,'rgba('+color+',1)');grad.addColorStop(1,'rgba('+color+',0)');
-  ctx.strokeStyle=grad;ctx.lineWidth=1.2+pulse*1.35;ctx.lineCap='round';
+  ctx.strokeStyle=grad;ctx.lineWidth=1.25+pulse*(warm?2.3:1.55);ctx.lineCap='round';
   ctx.beginPath();ctx.moveTo(x-l/2,y+.3);ctx.quadraticCurveTo(x,y-1,x+l/2,y);ctx.stroke();
  }
  ctx.restore();
@@ -85,16 +85,14 @@ function buildSunsetMasks(im){
    }
    ctx.putImageData(out,0,0);return {c,x,y,w,h};
   }
-  sunsetMasks={im,sunLight:make(397,250,235,166,'sun',true),sunShade:make(397,250,235,166,'sun',false),waterLight:make(390,416,270,168,'water',true),waterShade:make(390,416,270,168,'water',false)};
+  sunsetMasks={im,waterLight:make(390,416,270,168,'water',true),waterShade:make(390,416,270,168,'water',false)};
   return sunsetMasks;
  }catch(e){return null}
 }
-function openingSunset(ctx,im,t){
+function openingWater(ctx,im,t){
  const masks=buildSunsetMasks(im);if(!masks)return;
  ctx.save();ctx.globalCompositeOperation='source-over';
- const breath=.72*Math.sin(t*.63)+.28*Math.sin(t*.24+1.1);
- const solar=breath>=0?masks.sunLight:masks.sunShade;
- ctx.globalAlpha=.18+.76*Math.abs(breath);ctx.drawImage(solar.c,solar.x,solar.y);
+ // The original sun and sky are stationary and unmodified. Animate water only.
  const sea=masks.waterLight;
  for(let y=0;y<sea.h;y+=3){
   const f=y/sea.h,phase=t*(1.35+f*.55)-y*.16;
@@ -218,9 +216,9 @@ function draw(ctx,im,m,ox,oy,w,h,t,viewW,danger){
  ctx.beginPath();ctx.rect(0,0,1536,heights[m]);ctx.clip();
  for(let j=0;j<areas[m].length;j++){const a=areas[m][j];if(ox+a.r*w/1536<0||ox+a.x*w/1536>viewW)continue;
  if(mistScenes.has(m)&&j===0)mist(ctx,a,t,m);
- if(shimmerScenes.has(m)&&(m!==0||j!==0))shimmer(ctx,a,t,m===0);
+ if(shimmerScenes.has(m)&&(m!==0||j!==0))shimmer(ctx,a,t,m===0||a.y<500);
  }
- if(m===0){openingSunset(ctx,im,t);sunsetWaterGlints(ctx,t);}
+ if(m===0){openingWater(ctx,im,t);sunsetWaterGlints(ctx,t);}
  floatSpores(ctx,m,t);ctx.globalAlpha=1;
  if(!danger)distantBirds(ctx,m,t);
  ctx.restore();
