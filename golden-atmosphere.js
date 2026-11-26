@@ -23,7 +23,7 @@ const water=[
 ];
 const heights=[938,938,847,847,847,847,847,847,847,847,705];
 // Scene-specific wind: still passages alternate with currents of airborne life.
-const density=[0,.28,.64,.16,.90,1,0,.55,.38,.92,.70];
+const density=[0,.58,.58,.58,.58,.58,.58,.58,.58,.58,.58];
 const wind=[1,1,-1,1,1,-1,1,-1,1,1,-1];
 const atlas=new Image();atlas.src='assets/golden-blob-pollen.png?v=1';
 const cell=160;
@@ -154,15 +154,15 @@ const layers=[
  {size:[.064,.100],speed:[.055,.090],parallax:.35}
 ];
 const between=(a,b,r)=>a+(b-a)*r;
-function emit(m,W,H,seeded=false,seam=-Infinity){
+function emit(m,W,H,seeded=false,seam=-Infinity,seedX=null){
  const d=density[m]||0;if(!d)return;
- const max=W<H?12:19;
+ const max=W<H?9:16;
  const free=max-pollen.items.length;if(free<=0)return;
  const seed=++pollen.serial*37+m*971;
  const r=i=>rand(seed+i*11);
- const layer=r(1)<.40?0:r(1)<.92?1:2;
- const count=Math.min(free,layer===2?2:r(2)<.45?1:r(2)<.78?2:3);
- const L=layers[layer],cy=H*between(.13,.54,r(4)),cx=seeded?Math.max(seam+H*.12,W*between(.25,.95,r(5))):Math.max(W+H*.13,seam+H*.15);
+ const layer=r(1)<.35?0:r(1)<.78?1:2;
+ const count=Math.min(free,seedX!==null?1:r(2)<.84?1:2);
+ const L=layers[layer],cy=H*between(.13,.54,r(4)),cx=seedX!==null?seedX:seeded?Math.max(seam+H*.12,W*between(.25,.95,r(5))):Math.max(W+H*.10,seam+H*.12);
  const common=between(...L.speed,r(6))*H,phi=r(7)*Math.PI*2, family=Math.floor(r(8)*pollenFamilies.length);
  for(let k=0;k<count;k++){
   const n=seed+k*73,q=i=>rand(n+i*17);
@@ -179,15 +179,17 @@ function tick(m,W,H,t,cam,seam=-Infinity){
  if(mode==='off'||reduced||!ready()||!W||!H)return;
  const p=pollen;
  // Introduce particles offscreen before the beach enters view, never at the scene switch.
- const nearBeach=m===0&&seam<W+H*.25,zone=m===0?(nearBeach?1:0):m,d=density[zone]||0;
+ const nearBeach=m===0&&seam<W+H*.55,zone=m===0?(nearBeach?1:0):m,d=density[zone]||0;
  const reset=p.t===null||t<p.t||t-p.t>1||Math.abs(W-p.w)>2||Math.abs(H-p.h)>2||Math.abs(cam-p.cam)>H*1.5;
- if(reset){p.items=[];p.t=t;p.cam=cam;p.w=W;p.h=H;p.next=t;if(d&&m>0){for(let i=0;i<2;i++)emit(zone,W,H,true,seam)}}
+ if(reset){p.items=[];p.t=t;p.cam=cam;p.w=W;p.h=H;p.next=t;if(d&&m>0){const n=W<H?4:7;for(let i=0;i<n;i++)emit(zone,W,H,true,seam,W*(i+.5)/n)}}
  const dt=Math.min(.055,Math.max(0,t-p.t)),dc=cam-p.cam;p.t=t;p.cam=cam;
  const windPulse=.74+.26*Math.sin(t*.21+m*.8);
  if(d&&t>=p.next){
-  emit(zone,W,H,false,seam);
-  const lull=rand(p.serial*29+zone*73)<.24;
-  p.next=t+(lull?7:between(2.4,5,rand(p.serial*59)))/Math.max(.30,d);
+  // Maintain a quiet, evenly spaced stream; replenish just outside the viewport.
+  const entry=Math.max(W+H*.10,seam+H*.12);
+  const nearEntry=p.items.some(q=>Math.abs(q.x-entry)<H*.12);
+  if(!nearEntry)emit(zone,W,H,false,seam);
+  p.next=t+between(1.3,2.1,rand(p.serial*59+zone*11));
  }else if(!d){p.next=t}
  for(const q of p.items){
   q.age+=dt;
@@ -202,6 +204,8 @@ function tick(m,W,H,t,cam,seam=-Infinity){
   q.rotation+=q.spin*dt;
  }
  p.items=p.items.filter(q=>q.x> -q.size*1.3&&q.x<W+H*.95);
+ // When moving backwards, supply particles from the left edge, not the visible interior.
+ if(d&&m>0&&dc<-.5&&p.items.length<(W<H?4:7)&&!p.items.some(q=>q.x<H*.06))emit(zone,W,H,false,seam,-H*.12);
 }
 function drawPollen(ctx,front,W,H){
  if(mode==='off'||reduced||!ready())return;
