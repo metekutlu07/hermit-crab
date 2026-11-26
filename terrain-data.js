@@ -1,4 +1,4 @@
-/* Golden Shores: manually revised collision geometry from the exported Terrain Studio file. */
+/* Golden Shores: manually revised collision geometry; Module 4 original ground restored. */
 window.GOLDEN_TERRAIN=[
   {
     "file": "01-hermits-house.jpeg",
@@ -376,7 +376,54 @@ window.GOLDEN_TERRAIN=[
     "file": "04-final.jpeg",
     "width": 1536,
     "height": 847,
-    "ground": [],
+    "ground": [
+      [
+        [
+          0,
+          610
+        ],
+        [
+          140,
+          622
+        ],
+        [
+          275,
+          642
+        ],
+        [
+          420,
+          652
+        ],
+        [
+          560,
+          655
+        ],
+        [
+          720,
+          657
+        ],
+        [
+          870,
+          655
+        ],
+        [
+          1020,
+          648
+        ],
+        [
+          1190,
+          640
+        ],
+        [
+          1360,
+          634
+        ],
+        [
+          1536,
+          626
+        ]
+      ]
+    ],
     "platforms": [
       [
         [

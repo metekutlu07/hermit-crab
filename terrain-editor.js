@@ -1,5 +1,5 @@
 (()=>{'use strict';
-const $=id=>document.getElementById(id),base=window.GOLDEN_TERRAIN,copy=x=>JSON.parse(JSON.stringify(x)),key='goldenTerrainV4',kinds=['ground','platforms','walls','hazards'],names={ground:'Ground',platforms:'Platform',walls:'Wall',hazards:'Water'},colors={ground:'#72ffac',platforms:'#ffd56a',walls:'#ff657b',hazards:'#63cbff'};
+const $=id=>document.getElementById(id),base=window.GOLDEN_TERRAIN,copy=x=>JSON.parse(JSON.stringify(x)),key='goldenTerrainV5',kinds=['ground','platforms','walls','hazards'],names={ground:'Ground',platforms:'Platform',walls:'Wall',hazards:'Water'},colors={ground:'#72ffac',platforms:'#ffd56a',walls:'#ff657b',hazards:'#63cbff'};
 const ordered=k=>k==='ground'||k==='platforms',minPoints=k=>k==='hazards'?3:2;
 let data=copy(base);try{const v=JSON.parse(localStorage.getItem(key)||'null');if(valid(v))data=v.map((m,i)=>({...base[i],ground:m.ground,platforms:m.platforms,walls:m.walls,hazards:m.hazards}));}catch{}
 let index=0,kind='ground',lineIndex=0,vertex=-1,mode='move',drag=null,history=[],img=new Image(),loadToken=0;
