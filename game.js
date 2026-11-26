@@ -274,8 +274,8 @@ function clearHeld(){
 }
 function release(id){if(buttonPointers.delete(id))syncHeld()}
 function assign(id,a){if(buttonPointers.get(id)===a)return;buttonPointers.set(id,a);syncHeld();if(a==='jump')jump()}
-function inControl(a,x,y){const b=$(a),r=b.getBoundingClientRect();return x>=r.left-10&&x<=r.right+10&&y>=r.top-10&&y<=r.bottom+10}
-function reconcileTouches(e){const active=new Set(Array.from(e.touches||[],t=>t.identifier));for(const id of touchPointers.keys())if(!active.has(id)){touchPointers.delete(id);release('t:'+id)}}
+function inControl(a,x,y){const b=$(a),r=b.getBoundingClientRect();return x>=r.left-18&&x<=r.right+18&&y>=r.top-18&&y<=r.bottom+18}
+function reconcileTouches(e){if(!e.touches)return;const active=new Set(Array.from(e.touches,t=>t.identifier));for(const id of touchPointers.keys())if(!active.has(id)){touchPointers.delete(id);release('t:'+id)}}
 function finishTouches(e){for(const t of Array.from(e.changedTouches||[])){if(touchPointers.has(t.identifier)){touchPointers.delete(t.identifier);release('t:'+t.identifier)}}reconcileTouches(e)}
 const playable=()=>state.mode==='game'&&!state.paused;
 for(const a of ['left','right','jump','hide']){
@@ -284,6 +284,8 @@ for(const a of ['left','right','jump','hide']){
  b.addEventListener('touchstart',e=>{
   e.preventDefault();reconcileTouches(e);if(!playable())return;
   for(const t of Array.from(e.changedTouches)){if(!inControl(a,t.clientX,t.clientY))continue;touchPointers.set(t.identifier,a);assign('t:'+t.identifier,a)}
+  // Restore other still-held controls from the full touch list before the next frame.
+  for(const t of Array.from(e.touches||[])){const b=t.target?.closest?.('#controls .ctrl'),action=b?.id;if(action&&['left','right','hide'].includes(action)&&inControl(action,t.clientX,t.clientY)){touchPointers.set(t.identifier,action);assign('t:'+t.identifier,action)}}
  },{passive:false});
  b.addEventListener('pointerdown',e=>{
   if(e.pointerType==='touch')return;e.preventDefault();if(!playable()||e.button!==0)return;
@@ -306,12 +308,12 @@ document.addEventListener('pointermove',e=>{const a=buttonPointers.get(e.pointer
 for(const ev of ['pointerup','pointercancel'])document.addEventListener(ev,e=>release(e.pointerId),{capture:true});
 window.addEventListener('blur',clearHeld);window.addEventListener('pagehide',clearHeld);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)clearHeld()});
-document.addEventListener('gesturestart',e=>{if(playable()){e.preventDefault();clearHeld()}},{passive:false});
+for(const ev of ['gesturestart','gesturechange','gestureend'])document.addEventListener(ev,e=>{if(playable()&&e.cancelable)e.preventDefault()},{passive:false});
 const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',ArrowUp:'jump',KeyW:'jump',ArrowDown:'hide',KeyH:'hide',ShiftLeft:'hide'};
 window.addEventListener('keydown',e=>{if(!playable())return;const a=KEYMAP[e.code];if(!a)return;e.preventDefault();if(a==='jump'){if(!e.repeat){heldKeys.set(e.code,a);syncHeld();jump()}}else{heldKeys.set(e.code,a);syncHeld()}});
 window.addEventListener('keyup',e=>{if(heldKeys.delete(e.code))syncHeld()});
 let jumps=0;
-function jump(){if(state.mode!=='game'||state.paused||controls.hide)return;if(state.ground){state.vy=newGolden?-940:-730;state.ground=false;jumps=1;tone(520)}else if(state.shell==='spring'&&jumps<2){state.vy=-670;jumps=2;tone(700)}}
+function jump(){if(state.mode!=='game'||state.paused||controls.hide)return;const direction=(+!!controls.right)-(+!!controls.left);if(state.ground){if(direction)state.vx=direction*(state.shell==='heavy'?215:newGolden?415:350);state.vy=newGolden?-940:-730;state.ground=false;jumps=1;tone(520)}else if(state.shell==='spring'&&jumps<2){state.vy=-670;jumps=2;tone(700)}}
 function groundSegments(ch){let seg=[];for(let m=0;m<3;m++){const left=m*MW,right=(m+1)*MW,C=CHAPTERS[ch];if(ch===3&&m===1){seg.push([left,left+370,C.floor],[left+1320,right,C.floor]);for(let [a,b,y] of C.platforms[m])seg.push([left+a,left+b,y])}else if(ch===0&&m===1){seg.push([left,left+585,C.floor],[left+760,right,C.floor]);seg.push([left+585,left+760,C.floor-72])}else{seg.push([left,right,C.floor])}for(let [a,b,y] of C.platforms[m]){if(ch===3&&m===1)continue;seg.push([left+a,left+b,y])}}return seg}
 let segments=CHAPTERS.map((_,i)=>groundSegments(i));
 function breakWall(){if(state.broken)return;state.broken=true;state.vx=135;tone(290);note('The granite shell fractures the ancient stone!',2500);save()}
@@ -350,7 +352,7 @@ function progress(dt){if(state.mode!=='game'||state.paused)return;const C=CHAPTE
  if(state.chapter===2&&m===1&&!state.broken){const wall=MW+855;if(state.x>wall-85&&state.x<wall+45){if(state.shell==='heavy'&&(controls.right||controls.hide)){breakWall()}else if(state.vx>0){state.x=wall-85;state.vx=0;if(performance.now()%1200<dt*1000)note('A fractured wall · Try the Granite Shell',1600)}}}
  const prevY=state.y,prevX=state.x,wasGrounded=state.ground;const wanted=(+!!controls.right)-(+!!controls.left);
  const maxspeed=controls.hide?0:state.shell==='heavy'?215:newGolden?415:350;
- if(wanted){const target=wanted*maxspeed;state.vx+=(target-state.vx)*Math.min(1,dt*(state.ground?12:8))}else state.vx*=Math.exp(-12*dt);
+ if(wanted){const target=wanted*maxspeed;state.vx+=(target-state.vx)*Math.min(1,dt*(state.ground?12:8))}else state.vx*=Math.exp(-(state.ground||controls.hide?12:.65)*dt);
  state.x+=state.vx*dt;state.x=Math.max(66,Math.min(chapterWidth(state.chapter)+80,state.x));
  state.vy+=(state.shell==='float'&&!state.ground?GRAV*.34:GRAV)*dt;state.y+=state.vy*dt;if(newGolden)state.x=blockWalls(prevX,prevY,state.x,state.y);state.ground=false;
  const sh=segments[state.chapter];let landed=null;if(newGolden&&state.chapter===0){landed=newLanding(prevX,prevY,wasGrounded)}else for(const [x1,x2,y] of sh){if(state.x+31>x1&&state.x-31<x2&&prevY<=y+4&&state.y>=y&&state.vy>=0){if(landed===null||y<landed)landed=y}}

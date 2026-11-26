@@ -28,8 +28,10 @@ const wind=[1,1,-1,1,1,-1,1,-1,1,1,-1];
 const atlas=new Image();atlas.src='assets/golden-blob-pollen.png?v=1';
 const cell=160;
 const ready=()=>atlas.complete&&atlas.naturalWidth===640&&atlas.naturalHeight===480;
-// Each color family is painted directly in the atlas. Green is intentionally muted.
-const pollenFamilies=[[1,4,10],[2,7,9],[0,5,8,11],[3,6]];
+// Lavender, orange/coral and pink only; never select the green cells.
+const pollenFamilies=[[1,4,10],[0,5,8,11],[3,6]];
+let mutedAtlas=null;
+function backgroundAtlas(){if(mutedAtlas)return mutedAtlas;if(typeof document==='undefined'||!ready())return atlas;try{const c=document.createElement('canvas');c.width=640;c.height=480;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(atlas,0,0);const im=x.getImageData(0,0,c.width,c.height),d=im.data;for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const l=.2126*d[i]+.7152*d[i+1]+.0722*d[i+2];for(let k=0;k<3;k++)d[i+k]=Math.round((l+(d[i+k]-l)*.58)*.78)}x.putImageData(im,0,0);mutedAtlas=c;return c}catch{mutedAtlas=atlas;return atlas}}
 const birdScenes=new Set([0,1,3,5,8,10]);
 const mistScenes=new Set([0,1,3,5,8]);
 const shimmerScenes=new Set([0,1,2,5,7,8,10]);
@@ -71,7 +73,7 @@ function floatSpores(ctx,m,t){
   const px=((rand(seed+2)*1536+dir*t*(7+rand(seed+3)*9)+Math.sin(t*.36+seed)*16)%1536+1536)%1536;
   const py=H*(.10+rand(seed+4)*.47)+Math.sin(t*.24+seed)*17-phase*18;
   ctx.globalAlpha=Math.min(.72,fade*gust*(.35+rand(seed+5)*.32)*intensity);
-  ctx.fillStyle=['#FFF0C5','#F5CFD9','#D8D2F4','#DCEAD2'][k%4];
+  ctx.fillStyle=['#BF9C8B','#B58B9D','#9A89AD','#B79BA7'][k%4];
   ctx.beginPath();const size=1.0+rand(seed+6)*1.6;ctx.ellipse(px,py,size,size*.82,0,0,Math.PI*2);ctx.fill();
  }
  ctx.globalAlpha=1;
@@ -86,17 +88,17 @@ const layers=[
 const between=(a,b,r)=>a+(b-a)*r;
 function emit(m,W,H,seeded=false){
  const d=density[m]||0;if(!d)return;
- const max=W<H?20:32;
+ const max=W<H?24:38;
  const free=max-pollen.items.length;if(free<=0)return;
  const seed=++pollen.serial*37+m*971;
  const r=i=>rand(seed+i*11);
  const layer=r(1)<.40?0:r(1)<.92?1:2;
- const count=Math.min(free,layer===2?1:r(2)<.45?1:r(2)<.78?2:3);
+ const count=Math.min(free,layer===2?2:r(2)<.45?1:r(2)<.78?2:3);
  const L=layers[layer],cy=H*between(.13,.54,r(4)),cx=seeded?W*between(.30,.88,r(5)):W+H*.07;
- const common=between(...L.speed,r(6))*H,phi=r(7)*Math.PI*2, family=Math.floor(r(8)*4);
+ const common=between(...L.speed,r(6))*H,phi=r(7)*Math.PI*2, family=Math.floor(r(8)*pollenFamilies.length);
  for(let k=0;k<count;k++){
   const n=seed+k*73,q=i=>rand(n+i*17);
-  const size=H*between(...L.size,q(1))*(k===0?1:k===1?.68:.48);
+  const size=H*between(...L.size,q(1))*(layer===2?1:k===0?1:k===1?.68:.48);
   const choices=pollenFamilies[family],art=choices[Math.floor(q(3)*choices.length)];
   pollen.items.push({layer,art,family,size,x:cx+k*H*.037+H*(q(4)-.5)*.025,y:cy+H*(q(5)-.5)*.09,
    age:seeded?1.7:q(6)*.45,life:Math.max(22,(W+H*.4)/common*1.8),
@@ -137,7 +139,7 @@ function drawPollen(ctx,front,W,H){
   if((q.size>H*.015)!==front||q.x+q.size<0||q.x-q.size>W)continue;
   const size=q.size;
   ctx.save();ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.translate(q.x,q.y);ctx.rotate(q.rotation+q.rock*Math.sin(q.age*.64+q.phase)+.12*Math.sin(q.age*1.31+q.phi));
-  ctx.drawImage(atlas,q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
+  ctx.drawImage(q.size<=H*.015?backgroundAtlas():atlas,q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
  }
 }
 function pollenReset(){pollen.t=null;pollen.items=[]}
