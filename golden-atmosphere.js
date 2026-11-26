@@ -25,37 +25,14 @@ const heights=[938,938,847,847,847,847,847,847,847,847,705];
 // Scene-specific wind: still passages alternate with currents of airborne life.
 const density=[.85,.28,.64,.16,.90,1,0,.55,.38,.92,.70];
 const wind=[1,1,-1,1,1,-1,1,-1,1,1,-1];
-const atlas=new Image();atlas.src='assets/golden-organic-spores.png?v=1';
+const atlas=new Image();atlas.src='assets/golden-blob-pollen.png?v=1';
 const cell=160;
 const ready=()=>atlas.complete&&atlas.naturalWidth===640&&atlas.naturalHeight===480;
-// Reuse the painted silhouette and grain, with two new pigment palettes.
-// Build once, not per frame, and leave the original alpha channel untouched.
-const pigmentAtlases=[];
-const pigments=[
- [[80,39,36],[154,67,55],[222,126,99],[255,201,161],[255,239,211]], // warm coral
- [[84,34,61],[151,62,101],[215,119,151],[249,193,207],[255,238,234]] // rose pink
-];
-function recolorPixel(r,g,b,palette){
- const light=.2126*r+.7152*g+.0722*b;
- const stops=[0,85,145,205,255];
- let j=0;while(j<3&&light>stops[j+1])j++;
- const t=(light-stops[j])/(stops[j+1]-stops[j]);
- return palette[j].map((v,k)=>Math.round(v+(palette[j+1][k]-v)*t));
-}
-function pigmentAtlas(family){
- if(family<2)return atlas;
- const index=family-2;if(pigmentAtlases[index])return pigmentAtlases[index];
- if(!ready()||typeof document==='undefined')return atlas;
- try{
-  const c=document.createElement('canvas');c.width=640;c.height=480;
-  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(atlas,0,0);
-  const im=x.getImageData(0,0,c.width,c.height),d=im.data;
-  for(let i=0;i<d.length;i+=4){if(!d[i+3])continue;const rgb=recolorPixel(d[i],d[i+1],d[i+2],pigments[index]);d[i]=rgb[0];d[i+1]=rgb[1];d[i+2]=rgb[2]}
-  x.putImageData(im,0,0);pigmentAtlases[index]=c;return c;
- }catch(e){pigmentAtlases[index]=atlas;return atlas}
-}
+// Each color family is painted directly in the atlas. Green is intentionally muted.
+const pollenFamilies=[[1,4,10],[2,7,9],[0,5,8,11],[3,6]];
 const birdScenes=new Set([0,1,3,5,8,10]);
 const mistScenes=new Set([0,1,3,5,8]);
+const shimmerScenes=new Set([0,1,2,5,7,8,10]);
 const rand=(n)=>{const x=Math.sin(n*127.1+311.7)*43758.5453123;return x-Math.floor(x)};
 function bounds(p){return [Math.min(...p.map(a=>a[0])),Math.min(...p.map(a=>a[1])),Math.max(...p.map(a=>a[0])),Math.max(...p.map(a=>a[1]))]}
 function clip(ctx,p){ctx.beginPath();p.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip()}
@@ -68,10 +45,10 @@ function shimmer(ctx,a,t,warm){
   const pulse=Math.pow(.5+.5*Math.sin(phase),1.6);
   if(pulse<.05)continue;
   const x=g.x+Math.sin(phase*.5)*g.drift,y=g.y+Math.sin(phase)*.8,l=g.length*(.8+pulse*.2);
-  ctx.globalAlpha=Math.min(.85,(warm?.58:.48)*pulse*intensity);
+  ctx.globalAlpha=Math.min(.38,(warm?.29:.23)*pulse*Math.min(intensity,1.15));
   const grad=ctx.createLinearGradient(x-l/2,y,x+l/2,y);const color=warm?'255,221,157':'232,240,235';
   grad.addColorStop(0,'rgba('+color+',0)');grad.addColorStop(.5,'rgba('+color+',1)');grad.addColorStop(1,'rgba('+color+',0)');
-  ctx.strokeStyle=grad;ctx.lineWidth=1.4+pulse*1.1;ctx.lineCap='round';
+  ctx.strokeStyle=grad;ctx.lineWidth=.9+pulse*.65;ctx.lineCap='round';
   ctx.beginPath();ctx.moveTo(x-l/2,y+.3);ctx.quadraticCurveTo(x,y-1,x+l/2,y);ctx.stroke();
  }
  ctx.restore();
@@ -102,14 +79,14 @@ function floatSpores(ctx,m,t){
 // Individual pollen: screen-crossing wind currents, with independent soft motion.
 const pollen={items:[],t:null,cam:0,w:0,h:0,next:0,serial:0};
 const layers=[
- {size:[.014,.030],speed:[.022,.040],parallax:.09},
- {size:[.031,.063],speed:[.038,.072],parallax:.20},
- {size:[.064,.100],speed:[.055,.090],parallax:.35}
+ {size:[.007,.015],speed:[.022,.040],parallax:.09},
+ {size:[.0155,.0315],speed:[.038,.072],parallax:.20},
+ {size:[.032,.050],speed:[.055,.090],parallax:.35}
 ];
 const between=(a,b,r)=>a+(b-a)*r;
 function emit(m,W,H,seeded=false){
  const d=density[m]||0;if(!d)return;
- const max=W<H?10:16;
+ const max=W<H?20:32;
  const free=max-pollen.items.length;if(free<=0)return;
  const seed=++pollen.serial*37+m*971;
  const r=i=>rand(seed+i*11);
@@ -120,8 +97,8 @@ function emit(m,W,H,seeded=false){
  for(let k=0;k<count;k++){
   const n=seed+k*73,q=i=>rand(n+i*17);
   const size=H*between(...L.size,q(1))*(k===0?1:k===1?.68:.48);
-  const art=(family===1?6:0)+Math.floor(q(3)*6);
-  pollen.items.push({layer,art,family,size,x:cx+k*H*.057+H*(q(4)-.5)*.025,y:cy+H*(q(5)-.5)*.12,
+  const choices=pollenFamilies[family],art=choices[Math.floor(q(3)*choices.length)];
+  pollen.items.push({layer,art,family,size,x:cx+k*H*.037+H*(q(4)-.5)*.025,y:cy+H*(q(5)-.5)*.09,
    age:seeded?1.7:q(6)*.45,life:Math.max(22,(W+H*.4)/common*1.8),
    vx:common*between(.79,1.23,q(7)),vy:H*between(-.013,.011,q(8)),
    phase:q(9)*Math.PI*2,phi,rate:between(.38,.86,q(10)),rotation:q(11)*Math.PI*2,
@@ -132,13 +109,13 @@ function tick(m,W,H,t,cam){
  if(mode==='off'||reduced||!ready()||!W||!H)return;
  const p=pollen,d=density[m]||0;
  const reset=p.t===null||t<p.t||t-p.t>1||Math.abs(W-p.w)>2||Math.abs(H-p.h)>2||Math.abs(cam-p.cam)>H*1.5;
- if(reset){p.items=[];p.t=t;p.cam=cam;p.w=W;p.h=H;p.next=t+1.7;if(d){emit(m,W,H,true);emit(m,W,H,true)}}
+ if(reset){p.items=[];p.t=t;p.cam=cam;p.w=W;p.h=H;p.next=t+.85;if(d){for(let i=0;i<4;i++)emit(m,W,H,true)}}
  const dt=Math.min(.055,Math.max(0,t-p.t)),dc=cam-p.cam;p.t=t;p.cam=cam;
  const windPulse=.74+.26*Math.sin(t*.21+m*.8);
  if(d&&t>=p.next){
   emit(m,W,H);
   const lull=rand(p.serial*29+m*73)<.24;
-  p.next=t+(lull?7:between(2.4,5.0,rand(p.serial*59)))/Math.max(.30,d);
+  p.next=t+(lull?3.5:between(1.2,2.5,rand(p.serial*59)))/Math.max(.30,d);
  }else if(!d){p.next=t+1.3}
  for(const q of p.items){
   q.age+=dt;
@@ -157,10 +134,10 @@ function tick(m,W,H,t,cam){
 function drawPollen(ctx,front,W,H){
  if(mode==='off'||reduced||!ready())return;
  for(const q of pollen.items.slice().sort((a,b)=>a.size-b.size)){
-  if((q.size>H*.030)!==front||q.x+q.size<0||q.x-q.size>W)continue;
+  if((q.size>H*.015)!==front||q.x+q.size<0||q.x-q.size>W)continue;
   const size=q.size;
   ctx.save();ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.translate(q.x,q.y);ctx.rotate(q.rotation+q.rock*Math.sin(q.age*.64+q.phase)+.12*Math.sin(q.age*1.31+q.phi));
-  ctx.drawImage(pigmentAtlas(q.family),q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
+  ctx.drawImage(atlas,q.art%4*cell,Math.floor(q.art/4)*cell,cell,cell,-size/2,-size/2,size,size);ctx.restore();
  }
 }
 function pollenReset(){pollen.t=null;pollen.items=[]}
@@ -184,7 +161,7 @@ function draw(ctx,im,m,ox,oy,w,h,t,viewW,danger){
  ctx.beginPath();ctx.rect(0,0,1536,heights[m]);ctx.clip();
  for(let j=0;j<areas[m].length;j++){const a=areas[m][j];if(ox+a.r*w/1536<0||ox+a.x*w/1536>viewW)continue;
  if(mistScenes.has(m)&&j===0)mist(ctx,a,t,m);
- shimmer(ctx,a,t,m===0&&j<2||m===4);
+ if(shimmerScenes.has(m))shimmer(ctx,a,t,m===0&&j<2);
  }
  floatSpores(ctx,m,t);ctx.globalAlpha=1;
  if(!danger)distantBirds(ctx,m,t);

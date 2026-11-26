@@ -35,7 +35,7 @@ function updateHomeLanguage(){
  for(const [id,label] of [['hide','HIDE'],['jump','JUMP']]){const el=$(id);if(el)el.querySelector('span').textContent=tr(label)}
 }
 
-let buttonPointers=new Map(),touchPointers=new Map(),audio=null;
+let buttonPointers=new Map(),touchPointers=new Map(),heldKeys=new Map(),audio=null;
 let goldenSoundscape=null;
 function soundPreference(){try{return localStorage.getItem('travelerSoundEnabled')!=='0'}catch{return true}}
 function syncSoundButtons(){
@@ -263,13 +263,53 @@ function updateHud(){const C=CHAPTERS[state.chapter];$('chapterIndex').textConte
 function equip(kind){if(!state.available.includes(kind))return;state.shell=kind;tone(510);updateHud();save();note(`${SHELLS[kind].name} Shell · ${SHELLS[kind].ability}`,1800)}
 function note(txt,ms=2300){const el=$('message');el.textContent=translatedText(txt);el.classList.add('show');clearTimeout(state.messages);state.messages=setTimeout(()=>el.classList.remove('show'),ms)}
 function unlock(kind){if(state.available.includes(kind))return;state.available.push(kind);equip(kind);tone(830);note(`Discovered ${SHELLS[kind].name} Shell! ${SHELLS[kind].ability}`,4000);save()}
-function clearHeld(){controls.left=controls.right=controls.hide=false;buttonPointers.clear();touchPointers.clear();document.querySelectorAll('.ctrl').forEach(b=>b.classList.remove('pressed'))}
-function release(id){if(!buttonPointers.has(id))return;const a=buttonPointers.get(id);buttonPointers.delete(id);if(a==='left'||a==='right'||a==='hide')controls[a]=[...buttonPointers.values()].includes(a);const b=$(a);if(b&&!controls[a])b.classList.remove('pressed')}
-function assign(id,a){buttonPointers.set(id,a);if(a==='jump')jump();else if(a==='hide')controls.hide=true;else controls[a]=true;const b=$(a);if(b)b.classList.add('pressed')}
-for(const a of ['left','right','jump','hide']){const b=$(a);b.addEventListener('pointerdown',e=>{e.preventDefault();if(state.mode!=='game'||state.paused)return;try{b.setPointerCapture(e.pointerId)}catch{}assign(e.pointerId,a)});for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,e=>{e.preventDefault();release(e.pointerId)});b.addEventListener('contextmenu',e=>e.preventDefault());b.addEventListener('dragstart',e=>e.preventDefault())}
-document.addEventListener('pointerup',e=>release(e.pointerId));document.addEventListener('pointercancel',e=>release(e.pointerId));window.addEventListener('blur',clearHeld);document.addEventListener('visibilitychange',()=>{if(document.hidden)clearHeld()});
+function syncHeld(){
+ const actions=[...buttonPointers.values(),...heldKeys.values()];
+ for(const a of ['left','right','hide'])controls[a]=actions.includes(a);
+ for(const a of ['left','right','hide','jump']){const b=$(a);if(b)b.classList.toggle('pressed',actions.includes(a))}
+}
+function clearHeld(){
+ const captures=[...buttonPointers.entries()];buttonPointers.clear();touchPointers.clear();heldKeys.clear();syncHeld();
+ for(const [id,a] of captures){if(typeof id==='number'){const b=$(a);try{if(b.hasPointerCapture(id))b.releasePointerCapture(id)}catch{}}}
+}
+function release(id){if(buttonPointers.delete(id))syncHeld()}
+function assign(id,a){if(buttonPointers.get(id)===a)return;buttonPointers.set(id,a);syncHeld();if(a==='jump')jump()}
+function inControl(a,x,y){const b=$(a),r=b.getBoundingClientRect();return x>=r.left-10&&x<=r.right+10&&y>=r.top-10&&y<=r.bottom+10}
+function reconcileTouches(e){const active=new Set(Array.from(e.touches||[],t=>t.identifier));for(const id of touchPointers.keys())if(!active.has(id)){touchPointers.delete(id);release('t:'+id)}}
+function finishTouches(e){for(const t of Array.from(e.changedTouches||[])){if(touchPointers.has(t.identifier)){touchPointers.delete(t.identifier);release('t:'+t.identifier)}}reconcileTouches(e)}
+const playable=()=>state.mode==='game'&&!state.paused;
+for(const a of ['left','right','jump','hide']){
+ const b=$(a);
+ // Native touch handling on iOS, independent of pointer capture.
+ b.addEventListener('touchstart',e=>{
+  e.preventDefault();reconcileTouches(e);if(!playable())return;
+  for(const t of Array.from(e.changedTouches)){if(!inControl(a,t.clientX,t.clientY))continue;touchPointers.set(t.identifier,a);assign('t:'+t.identifier,a)}
+ },{passive:false});
+ b.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='touch')return;e.preventDefault();if(!playable()||e.button!==0)return;
+  release(e.pointerId);try{b.setPointerCapture(e.pointerId)}catch{}assign(e.pointerId,a);
+ });
+ for(const ev of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(ev,e=>release(e.pointerId));
+ for(const ev of ['contextmenu','dragstart','selectstart'])b.addEventListener(ev,e=>e.preventDefault());
+}
+document.addEventListener('touchstart',reconcileTouches,{capture:true,passive:true});
+document.addEventListener('touchmove',e=>{
+ let managed=false;reconcileTouches(e);
+ for(const t of Array.from(e.changedTouches||[])){
+  const a=touchPointers.get(t.identifier);if(!a)continue;managed=true;
+  if(!inControl(a,t.clientX,t.clientY)){touchPointers.delete(t.identifier);release('t:'+t.identifier)}
+ }
+ if(managed&&e.cancelable)e.preventDefault();
+},{capture:true,passive:false});
+for(const ev of ['touchend','touchcancel'])document.addEventListener(ev,finishTouches,{capture:true,passive:true});
+document.addEventListener('pointermove',e=>{const a=buttonPointers.get(e.pointerId);if(a&&(!e.buttons||!inControl(a,e.clientX,e.clientY)))release(e.pointerId)},{capture:true});
+for(const ev of ['pointerup','pointercancel'])document.addEventListener(ev,e=>release(e.pointerId),{capture:true});
+window.addEventListener('blur',clearHeld);window.addEventListener('pagehide',clearHeld);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)clearHeld()});
+document.addEventListener('gesturestart',e=>{if(playable()){e.preventDefault();clearHeld()}},{passive:false});
 const KEYMAP={ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',Space:'jump',ArrowUp:'jump',KeyW:'jump',ArrowDown:'hide',KeyH:'hide',ShiftLeft:'hide'};
-window.addEventListener('keydown',e=>{if(state.mode!=='game'||state.paused)return;const a=KEYMAP[e.code];if(!a)return;e.preventDefault();if(a==='jump'){if(!e.repeat)jump()}else controls[a]=true});window.addEventListener('keyup',e=>{const a=KEYMAP[e.code];if(a&&a!=='jump')controls[a]=false});
+window.addEventListener('keydown',e=>{if(!playable())return;const a=KEYMAP[e.code];if(!a)return;e.preventDefault();if(a==='jump'){if(!e.repeat){heldKeys.set(e.code,a);syncHeld();jump()}}else{heldKeys.set(e.code,a);syncHeld()}});
+window.addEventListener('keyup',e=>{if(heldKeys.delete(e.code))syncHeld()});
 let jumps=0;
 function jump(){if(state.mode!=='game'||state.paused||controls.hide)return;if(state.ground){state.vy=newGolden?-940:-730;state.ground=false;jumps=1;tone(520)}else if(state.shell==='spring'&&jumps<2){state.vy=-670;jumps=2;tone(700)}}
 function groundSegments(ch){let seg=[];for(let m=0;m<3;m++){const left=m*MW,right=(m+1)*MW,C=CHAPTERS[ch];if(ch===3&&m===1){seg.push([left,left+370,C.floor],[left+1320,right,C.floor]);for(let [a,b,y] of C.platforms[m])seg.push([left+a,left+b,y])}else if(ch===0&&m===1){seg.push([left,left+585,C.floor],[left+760,right,C.floor]);seg.push([left+585,left+760,C.floor-72])}else{seg.push([left,right,C.floor])}for(let [a,b,y] of C.platforms[m]){if(ch===3&&m===1)continue;seg.push([left+a,left+b,y])}}return seg}
@@ -289,7 +329,7 @@ function updateBird(dt){
  if(!newGolden||state.chapter!==0||testModule||!imageReady(birdArt))return;
  const m=moduleAt(0,state.x);
  if(!birdEvent&&state.ground&&[3,7,10].includes(m)&&!birdDone.has(m)&&state.x>=moduleStart(0,m)+moduleWidth(0,m)*(m===3?.24:.42)){
-  birdDone.add(m);birdEvent={module:m,t:0,warning:m===3?3:2.5,resolved:false,x:state.x+1000};tone(1120);note('A bird is approaching. Hold HIDE!',(birdEvent.warning+.2)*1000);
+  birdDone.add(m);birdEvent={module:m,t:0,warning:m===3?3:2.5,resolved:false,x:state.x+1000};tone(1120);clearTimeout(state.messages);$('message').classList.remove('show');
  }
  const b=birdEvent;if(!b)return;b.t+=dt;b.x=state.x+(b.warning-b.t)*335;
  if(!b.resolved&&b.t>=b.warning){
@@ -390,7 +430,7 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  cx.restore();
  if(newGolden&&state.chapter===0&&!terrainDebug)window.GoldenAtmosphere?.drawPollen(cx,true,W,H);
  cx.restore()}
-function updateBirdWarning(){const el=$('birdWarning'),b=birdEvent;const active=!!b&&!b.resolved&&state.mode==='game'&&!state.paused;el.hidden=!active;if(!active)return;const remaining=Math.max(0,b.warning-b.t);el.querySelector('span').textContent=(gameLanguage==='zh'?'按住躲藏键':'HOLD HIDE')+' · '+remaining.toFixed(1)+'s';el.querySelector('i').style.transform='scaleX('+Math.max(0,Math.min(1,remaining/b.warning))+')';}
+function updateBirdWarning(){const el=$('birdWarning'),b=birdEvent;const active=!!b&&!b.resolved&&state.mode==='game'&&!state.paused;el.hidden=!active;if(!active)return;const remaining=Math.max(0,b.warning-b.t);el.querySelector('span').textContent=(gameLanguage==='zh'?'飞鸟靠近 · 按住躲藏键':'Bird approaching · Hold HIDE')+' · '+remaining.toFixed(1)+'s';el.querySelector('i').style.transform='scaleX('+Math.max(0,Math.min(1,remaining/b.warning))+')';}
 function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);updateBirdWarning();updateAtmosphere();render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
 function showDialog(title,html,buttons){state.paused=true;clearHeld();$('dialogTitle').textContent=tr(title);$('dialogBody').innerHTML=translatedText(html);const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=tr(b.text);btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
 document.addEventListener('visibilitychange',updateAtmosphere);
