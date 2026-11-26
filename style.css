@@ -379,3 +379,6 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 @media(orientation:portrait) and (prefers-reduced-motion:no-preference){
  #home.visible .home-tide.ready{display:block}
 }
+
+/* Mobile homepage: preserve existing sound button, move it to the top right. */
+@media(orientation:portrait){#home .home-art.clean-home #soundHome{inset:auto;top:max(10px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));left:auto;bottom:auto}}
