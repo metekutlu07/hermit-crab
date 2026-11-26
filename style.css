@@ -495,3 +495,13 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #overlay.story-intro[data-story=loading] .story-shell-cell .story-specimen-wipe{display:block;width:100%;height:auto;max-height:100%;object-fit:contain;animation:storySpecimenWipe 1.4s linear both}
 @keyframes storySpecimenWipe{0%{clip-path:inset(100% 0 0 0)}100%{clip-path:inset(0 0 0 0)}}
 @media(prefers-reduced-motion:reduce){#overlay.story-intro[data-story=loading] .story-shell-cell .story-specimen-wipe{animation:none!important;clip-path:none}}
+
+/* Vertical specimen sequence: discrete appearances, from the bottom upward. */
+#overlay.story-intro[data-story=loading] h2{top:8%}
+#overlay.story-intro[data-story=loading] .story-chapter{top:15%}
+#overlay.story-intro[data-story=loading] .story-shell-row{position:absolute;left:0;right:0;top:22%;height:60%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2dvh}
+#overlay.story-intro[data-story=loading] .story-shell-cell{flex:1 1 0;min-height:0;width:100%;height:auto;display:flex;align-items:center;justify-content:center}
+#overlay.story-intro[data-story=loading] .story-shell-cell .story-specimen-wipe{width:auto;height:100%;max-width:46%;max-height:100%;object-fit:contain;clip-path:none;animation:storySpecimenAppear .01s steps(1,end) both}
+@keyframes storySpecimenAppear{from{opacity:0}to{opacity:1}}
+#overlay.story-intro[data-story=loading] .story-caption p{top:87%}
+@media(prefers-reduced-motion:reduce){#overlay.story-intro[data-story=loading] .story-shell-cell .story-specimen-wipe{animation:none!important;opacity:1}}
