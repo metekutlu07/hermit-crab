@@ -509,3 +509,15 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 /* Fade the initialized playable painting in behind the black story curtain. */
 #overlay.story-intro.story-game-reveal{opacity:0;transition:opacity .9s ease;pointer-events:auto}
 @media(prefers-reduced-motion:reduce){#overlay.story-intro.story-game-reveal{transition:none}}
+
+/* Responsive chapter loading plate: vertical on phones, horizontal on desktop. */
+#overlay.story-intro[data-story=loading] .story-shell-cell .story-specimen-wipe{animation-delay:var(--portrait-delay,0s)}
+@media(orientation:landscape){
+ #overlay.story-intro[data-story=loading] .dialog{width:min(100%,1100px)}
+ #overlay.story-intro[data-story=loading] h2{top:15%;font-size:clamp(30px,6.5dvh,52px)}
+ #overlay.story-intro[data-story=loading] .story-chapter{top:26%}
+ #overlay.story-intro[data-story=loading] .story-shell-row{left:8%;right:8%;top:37%;height:27%;flex-direction:row;gap:3%}
+ #overlay.story-intro[data-story=loading] .story-shell-cell{flex:1 1 0;min-width:0;width:auto;height:100%}
+ #overlay.story-intro[data-story=loading] .story-shell-cell .story-specimen-wipe{width:auto;height:auto;max-width:100%;max-height:100%;animation-delay:var(--landscape-delay,0s)}
+ #overlay.story-intro[data-story=loading] .story-caption p{top:74%}
+}

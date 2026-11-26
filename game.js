@@ -505,7 +505,7 @@ function showGoldenIntro(onStart){
     for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++){if(data[(y*canvas.width+x)*4+3]>24){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}}
     if(x1>=x0&&y1>=y0){const crop=document.createElement('canvas');crop.width=x1-x0+1;crop.height=y1-y0+1;crop.getContext('2d').drawImage(canvas,x0,y0,crop.width,crop.height,0,0,crop.width,crop.height);specimen=crop}
     }catch{}}
-    specimen.classList.add('story-specimen-wipe');specimen.style.animationDelay=((shells.length-1-i)*.48)+'s';cell.append(specimen);row.append(cell)
+    specimen.classList.add('story-specimen-wipe');specimen.style.setProperty('--portrait-delay',((shells.length-1-i)*.48)+'s');specimen.style.setProperty('--landscape-delay',(i*.48)+'s');cell.append(specimen);row.append(cell)
    });
    const minimum=delay(3000);
    await Promise.all([minimum,...introNames.slice(1).map((name,i)=>jobs[i+1].catch(()=>loadIntroArt(name)).then(im=>{images[i+1]=im}))]);
