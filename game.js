@@ -26,10 +26,10 @@ const ZH={
  'Encyclopedia specimen:':'图鉴标本：','End of terrain test':'地形测试结束'
 };
 let gameLanguage='en';
-const tr=v=>gameLanguage==='zh'?(ZH[v]||v):v;
-function translatedText(v){if(gameLanguage!=='zh')return v;if(ZH[v])return ZH[v];return Object.keys(ZH).sort((a,b)=>b.length-a.length).reduce((t,k)=>t.split(k).join(ZH[k]),v)}
+const tr=v=>gameLanguage==='zh'?(ZH[v]||v):window.travelerTranslate(v,gameLanguage);
+function translatedText(v){if(gameLanguage!=='zh')return window.travelerTranslate(v,gameLanguage);if(ZH[v])return ZH[v];return Object.keys(ZH).sort((a,b)=>b.length-a.length).reduce((t,k)=>t.split(k).join(ZH[k]),v)}
 function updateHomeLanguage(){
- document.documentElement.lang=gameLanguage==='zh'?'zh-CN':'en';
+ document.documentElement.lang=gameLanguage==='zh'?'zh-CN':gameLanguage;
  const title=$('homeTitle');if(title){const a=title.querySelectorAll('span');a[0].textContent=tr('A Traveler');a[1].textContent=tr('in a Shell')}
  for(const [id,label] of [['begin','Begin Journey'],['collection','Shell Collection'],['continue','Continue Journey'],['settingsHome','Settings'],['aboutHome','About'],['pauseBtn','MENU'],['livesLabel','Lives:'],['shellsLabel','Shells:']]){const el=$(id);if(el)el.textContent=tr(label)}
  for(const [id,label] of [['hide','HIDE'],['jump','JUMP']]){const el=$(id);if(el)el.querySelector('span').textContent=tr(label)}
@@ -40,7 +40,7 @@ let goldenSoundscape=null;
 function soundPreference(){try{return localStorage.getItem('travelerSoundEnabled')!=='0'}catch{return true}}
 function syncSoundButtons(){
  const zh=gameLanguage==='zh',retry=state.sound&&(!audio||audio.state!=='running');
- const label=zh?(retry?'声音：重试':state.sound?'声音：开启':'声音：关闭'):(retry?'Sound: Retry':state.sound?'Sound: On':'Sound: Off');
+ const label=zh?(retry?'声音：重试':state.sound?'声音：开启':'声音：关闭'):(tr('Sound')+': '+tr(retry?'Retry':state.sound?'On':'Off'));
  for(const id of ['soundHome','soundGame']){const el=$(id);if(el){el.textContent=label;el.setAttribute('aria-pressed',String(state.sound&&!retry));el.setAttribute('aria-label',label)}}
 }
 function primeAudio(){
@@ -359,16 +359,16 @@ function showGoldenCompletion(preview=false){
  const found=names.map((_,i)=>preview||!!state.collections['0-'+i]);
  const count=found.filter(Boolean).length;
  const number=['no','one','two','three','four','five'][count];
- const title=zh?'恭喜！':'Congratulations!';
- const intro=zh?'你已探索了岛屿的金色海岸。':'You have explored the Golden Shores of the island.';
+ const title=zh?"恭喜！":tr("Congratulations!");
+ const intro=zh?"你已探索了岛屿的金色海岸。":tr("You have explored the Golden Shores of the island.");
  const summary=zh?'你已收集了 '+count+' 种不同的贝壳。':count===1?'You have collected one shell.':'You have collected '+number+' different shells.';
  const next=()=>{closeDialog();if(preview){mode('home');return}enterChapter(1)};
  const home=()=>{closeDialog();mode('home')};
- showDialog(title,'',[{text:zh?'前往珊瑚花园':'Continue to Coral Gardens',fn:next},{text:zh?'返回主菜单':'Main Menu',fn:home}]);
+ showDialog(title,'',[{text:zh?"前往珊瑚花园":tr("Continue to Coral Gardens"),fn:next},{text:zh?"返回主菜单":tr("Main Menu"),fn:home}]);
  const overlay=$('overlay');overlay.classList.add('chapter-complete');
  const body=$('dialogBody');body.innerHTML='';
  function el(tag,cls,txt,parent){const node=document.createElement(tag);if(cls)node.className=cls;if(txt!==undefined)node.textContent=txt;parent.append(node);return node}
- el('p','completion-kicker',zh?'第一章 · 金色海岸':'CHAPTER I · GOLDEN SHORES',body);
+ el('p','completion-kicker',zh?"第一章 · 金色海岸":tr("CHAPTER I · GOLDEN SHORES"),body);
  el('p','completion-intro',intro,body);
  el('p','completion-summary',summary,body);
  const list=el('ol','completion-shells',undefined,body);
@@ -380,8 +380,8 @@ function showGoldenCompletion(preview=false){
    image.alt=name;image.draggable=false;image.decoding='async';image.src=assetURL('collection-shell-'+String(i+1).padStart(2,'0')+'.jpg');art.append(image);window.getJournalShellImage?.(i).then(im=>{if(image.isConnected&&im.naturalWidth){const copy=im.cloneNode();copy.alt=name;image.replaceWith(copy)}}).catch(()=>{});
   }else el('span','completion-missing','?',art);
   const label=el('div','completion-label',undefined,row);
-  const info=window.journalShellInfo?.(i);const line=el('div','completion-specimen-line',undefined,label);el('span','completion-name',found[i]?(info?.name||(zh?tr(name):name)):(zh?'尚未发现':'Undiscovered shell'),line);if(found[i]&&info){el('span','completion-number',info.number,line);el('p','completion-description',info.description,label);}
-  if(!found[i])el('small','completion-status',zh?'未收集':'Not collected',label);
+  const info=window.journalShellInfo?.(i);const line=el('div','completion-specimen-line',undefined,label);el('span','completion-name',found[i]?(info?.name||(zh?tr(name):name)):(zh?"尚未发现":tr("Undiscovered shell")),line);if(found[i]&&info){el('span','completion-number',info.number,line);el('p','completion-description',info.description,label);}
+  if(!found[i])el('small','completion-status',zh?"未收集":tr("Not collected"),label);
  });
  // Put the chapter identifier before the heading; preserve the standard dialog semantics.
  const kicker=body.querySelector('.completion-kicker');$('dialogTitle').before(kicker);
@@ -422,11 +422,11 @@ function showGoldenIntro(onStart){
  let active=true;
  function button(label,action){buttons.innerHTML='';const el=document.createElement('button');el.textContent=label;el.onclick=action;buttons.append(el);return el}
  function scene(type,im,words){
-  overlay.dataset.story=type;heading.textContent=type==='loading'?(zh?'金色海岸':'Golden Shores'):'';
+  overlay.dataset.story=type;heading.textContent=type==='loading'?(zh?"金色海岸":tr("Golden Shores")):'';
   body.innerHTML='';buttons.innerHTML='';
   const art=document.createElement('div');art.className='story-painting';art.append(im);body.append(art);
   const caption=document.createElement('div');caption.className='story-caption';body.append(caption);
-  if(type==='loading'){const chapter=document.createElement('small');chapter.className='story-chapter';chapter.textContent=zh?'第一章':'CHAPTER I';caption.append(chapter)}
+  if(type==='loading'){const chapter=document.createElement('small');chapter.className='story-chapter';chapter.textContent=zh?"第一章":tr("CHAPTER I");caption.append(chapter)}
   const p=document.createElement('p');p.textContent=words;caption.append(p);
   return art;
  }
@@ -470,8 +470,8 @@ function showGoldenIntro(onStart){
   await delay(fadeMs);
   if(!active)return;
   incoming.classList.remove('story-crossfade','story-crossfade-visible');
-  scene('bird',incoming,zh?'飞鸟靠近时，躲进你的壳中，直到危险远去。':'When birds approach, retreat into your shell until danger passes.');
-  const startButton=button(zh?'开始':'Start',start);startButton.disabled=true;
+  scene('bird',incoming,zh?"飞鸟靠近时，躲进你的壳中，直到危险远去。":tr("When birds approach, retreat into your shell until danger passes."));
+  const startButton=button(zh?"开始":tr("Start"),start);startButton.disabled=true;
   dialog.getBoundingClientRect();dialog.classList.remove('story-ui-hidden');
   await delay(fadeMs);startButton.disabled=false;
  }
@@ -481,8 +481,8 @@ function showGoldenIntro(onStart){
   if(!active)return;
   const dialog=overlay.querySelector('.dialog');
   dialog.classList.add('story-ui-hidden');
-  const art=scene('wake',images[1],zh?'夕阳沉入海面，小小旅人苏醒了。是时候沿着海岸漫游，寻找一个新家了。':'As the sun sinks into the ocean, a little traveler awakens. It is time for the hermit crab to wander along the shore in search of a new home.');
-  const next=button(zh?'下一页':'Next',bird);next.disabled=true;
+  const art=scene('wake',images[1],zh?"夕阳沉入海面，小小旅人苏醒了。是时候沿着海岸漫游，寻找一个新家了。":tr("As the sun sinks into the ocean, a little traveler awakens. It is time for the hermit crab to wander along the shore in search of a new home."));
+  const next=button(zh?"下一页":tr("Next"),bird);next.disabled=true;
   dialog.getBoundingClientRect();dialog.classList.remove('story-fade-out');
   overlay.classList.remove('story-loader-blackout');
   await delay(fadeMs+holdMs);
@@ -491,7 +491,7 @@ function showGoldenIntro(onStart){
   await delay(fadeMs);next.disabled=false;
  }
  const placeholder=document.createElement('div');
- const art=scene('loading',placeholder,zh?'加载中':'Loading');
+ const art=scene('loading',placeholder,zh?"加载中":tr("Loading"));
  const dots=document.createElement('span');dots.className='story-dots';dots.innerHTML='<i>.</i><i>.</i><i>.</i>';body.querySelector('p').append(dots);
  async function runLoading(){
   try{
@@ -513,8 +513,8 @@ function showGoldenIntro(onStart){
    if(active)awaken();
   }catch(err){
    // Do not replace the illustrated story with the old modal. Preserve the loading scene and offer retry.
-   const p=body.querySelector('p');p.textContent=zh?'插图加载失败，请重试。':'An illustration could not load. Please retry.';
-   button(zh?'重试':'Retry',()=>{goldenIntroBusy=false;overlay.classList.remove('story-intro');showGoldenIntro(onStart)});
+   const p=body.querySelector('p');p.textContent=zh?"插图加载失败，请重试。":tr("An illustration could not load. Please retry.");
+   button(zh?"重试":tr("Retry"),()=>{goldenIntroBusy=false;overlay.classList.remove('story-intro');showGoldenIntro(onStart)});
   }
  }
  runLoading();
@@ -626,7 +626,7 @@ function render(){if(state.mode!=='game'||!canvas.width||!canvas.height)return;c
  cx.restore()}
 function updateBirdWarning(){const el=$('birdWarning'),b=birdEvent;const active=!!b&&!b.resolved&&state.mode==='game'&&!state.paused;el.hidden=!active;if(!active)return;const remaining=Math.max(0,b.warning-b.t);el.querySelector('span').textContent=(gameLanguage==='zh'?'飞鸟靠近 · 按住躲藏键':'Bird approaching · Hold HIDE')+' · '+remaining.toFixed(1)+'s';el.querySelector('i').style.transform='scaleX('+Math.max(0,Math.min(1,remaining/b.warning))+')';}
 function loop(now){const dt=Math.min(.038,(now-state.last)/1000||.016);state.last=now;progress(dt);updateBirdWarning();updateAtmosphere();render();requestAnimationFrame(loop)}requestAnimationFrame(loop);
-function showDialog(title,html,buttons){state.paused=true;clearHeld();$('overlay').classList.remove('chapter-complete','about-page');$('overlay').querySelector('.completion-kicker')?.remove();$('dialogTitle').textContent=tr(title);$('dialogBody').innerHTML=translatedText(html);const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=tr(b.text);btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
+function showDialog(title,html,buttons){state.paused=true;clearHeld();$('overlay').classList.remove('chapter-complete','about-page');$('overlay').querySelector('.completion-kicker')?.remove();$('dialogTitle').textContent=translatedText(title);$('dialogBody').innerHTML=translatedText(html);const box=$('dialogButtons');box.innerHTML='';for(const b of buttons){const btn=document.createElement('button');btn.textContent=translatedText(b.text);btn.addEventListener('click',b.fn);box.append(btn)}$('overlay').classList.add('visible');$('overlay').setAttribute('aria-hidden','false')}
 document.addEventListener('visibilitychange',updateAtmosphere);
 function closeDialog(){state.chapterIntro=false;$('overlay').classList.remove('chapter-intro','chapter-complete','pause-menu','about-page');$('overlay').querySelector('.completion-kicker')?.remove(); $('overlay').classList.remove('visible');$('overlay').setAttribute('aria-hidden','true');state.paused=false;clearHeld()}
 function pause(){showDialog('Traveler’s Journal','',[{text:'Resume',fn:closeDialog},{text:'Shell Encyclopedia',fn:encyclopedia},{text:'Settings',fn:settings},{text:'Restart Chapter',fn:()=>{closeDialog();enterChapter(state.chapter);if(state.chapter===0&&!testModule)showGoldenIntro()}},{text:'Main Menu',fn:()=>{closeDialog();mode('home')}}]);$('overlay').classList.add('pause-menu')}
@@ -645,11 +645,11 @@ function setupEntryGate(){
  const request=document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen,exit=document.exitFullscreen||document.webkitExitFullscreen;
  function fullActive(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
  function refresh(){
-  const zh=gameLanguage==='zh';gate.lang=zh?'zh-CN':'en';
-  $('gateLanguageLabel').textContent=zh?'选择语言':'Language';$('gateSoundLabel').textContent=zh?'声音':'Sound';$('gateFullLabel').textContent=zh?'全屏':'Full screen';enter.textContent=zh?'进入':'Enter';
-  $('gateSoundText').textContent=zh?(state.sound?'开启':'关闭'):(state.sound?'On':'Off');
+  const zh=gameLanguage==='zh';gate.lang=zh?'zh-CN':gameLanguage;
+  $('gateLanguageLabel').textContent=zh?"选择语言":tr("Language");$('gateSoundLabel').textContent=zh?"声音":tr("Sound");$('gateFullLabel').textContent=zh?"全屏":tr("Full screen");enter.textContent=zh?"进入":tr("Enter");
+  $('gateSoundText').textContent=zh?(state.sound?'开启':'关闭'):tr(state.sound?'On':'Off');
   sound.setAttribute('aria-pressed',String(state.sound));$('gateSoundPath').setAttribute('d',state.sound?'M3 9h4l5-4v14l-5-4H3zM15 8q5 4 0 8m3-11q8 7 0 14':'M3 9h4l5-4v14l-5-4H3zM16 9l6 6m0-6-6 6');
-  fullGroup.hidden=!(mq.matches&&request&&exit);full.setAttribute('aria-pressed',String(fullActive()));$('gateFullPath').setAttribute('d',fullActive()?'M3 8H8V3 M21 8H16V3 M8 21V16H3 M16 21V16H21':'M8 3H3V8 M16 3H21V8 M3 16V21H8 M21 16V21H16');$('gateFullText').textContent=zh?(fullActive()?'开启':'关闭'):(fullActive()?'On':'Off');
+  fullGroup.hidden=!(mq.matches&&request&&exit);full.setAttribute('aria-pressed',String(fullActive()));$('gateFullPath').setAttribute('d',fullActive()?'M3 8H8V3 M21 8H16V3 M8 21V16H3 M16 21V16H21':'M8 3H3V8 M16 3H21V8 M3 16V21H8 M21 16V21H16');$('gateFullText').textContent=zh?(fullActive()?'开启':'关闭'):tr(fullActive()?'On':'Off');
  }
  gate.addEventListener('change',()=>{gameLanguage=gate.querySelector('input[name="language"]:checked').value;refresh()});
  sound.addEventListener('click',()=>{state.sound=!state.sound;try{localStorage.setItem('travelerSoundEnabled',state.sound?'1':'0')}catch{}syncSoundButtons();refresh()});
