@@ -476,13 +476,15 @@ function showGoldenIntro(onStart){
   await delay(fadeMs);startButton.disabled=false;
  }
  async function awaken(){
-  await fadeOut();
+  overlay.classList.add('story-loader-blackout');
+  await delay(fadeMs);
   if(!active)return;
   const dialog=overlay.querySelector('.dialog');
   dialog.classList.add('story-ui-hidden');
   const art=scene('wake',images[1],zh?'夕阳沉入海面，小小旅人苏醒了。是时候沿着海岸漫游，寻找一个新家了。':'As the sun sinks into the ocean, a little traveler awakens. It is time for the hermit crab to wander along the shore in search of a new home.');
   const next=button(zh?'下一页':'Next',bird);next.disabled=true;
   dialog.getBoundingClientRect();dialog.classList.remove('story-fade-out');
+  overlay.classList.remove('story-loader-blackout');
   await delay(fadeMs+holdMs);
   if(!reduced){for(const [i,ms] of [[2,800],[3,800],[4,400]]){if(overlay.dataset.story!=='wake')return;art.replaceChildren(images[i]);await delay(ms)}}else art.replaceChildren(images[4]);
   dialog.classList.remove('story-ui-hidden');
