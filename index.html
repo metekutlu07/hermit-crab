@@ -17,22 +17,25 @@
 @media(prefers-reduced-motion:reduce){#launchGrid img{animation:none}#launchLoading{transition:none}}
 </style></head>
 <body>
-<div id="launchLoading" role="status" aria-live="polite"><div id="launchGrid" aria-hidden="true"></div><p id="launchStatus">Loading…</p></div>
+<div id="launchLoading" hidden role="status" aria-live="polite"><div id="launchGrid" aria-hidden="true"></div><p id="launchStatus">Loading…</p></div>
 <script>
 (()=>{const overlay=document.getElementById('launchLoading'),grid=document.getElementById('launchGrid'),status=document.getElementById('launchStatus');
 const cells=Array.from({length:9},()=>{const el=document.createElement('div');grid.append(el);return el});
 const order=[0,1,2,5,8,7,6,3,4],cache=new Map(),delay=ms=>new Promise(r=>setTimeout(r,ms)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function load(name){if(cache.has(name))return cache.get(name);const p=new Promise(resolve=>{const im=new Image();im.alt='';im.decoding='async';im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src='assets/'+name});cache.set(name,p);return p}
 const shells=Array.from({length:20},(_,i)=>'collection-shell-'+String(i+1).padStart(2,'0')+'.jpg');
-const first=shells.slice(0,9).map(load);
+const specimens=['scallop','cowrie','cockle','limpet','moon-snail'].map(n=>'specimen-'+n+'-painted.png');
+const first=Array.from({length:9},(_,i)=>load(i<5?specimens[i]:'loading-shell-'+String(i+1).padStart(2,'0')+'.png')); 
+const allCollection=shells.map(load);
 const portrait=matchMedia('(orientation:portrait)').matches;
 const essentials=[portrait?'home-portrait-empty.jpeg':'home-landscape-empty.jpeg',portrait?'island-mobile.jpg':'island-desktop.jpg','golden-1.jpg','crab-golden-idle.png','crab-golden-walk.png'];
-const ready=Promise.all([...essentials.map(load),...shells.slice(9).map(load)]);
+const ready=Promise.all([...essentials.map(load),...allCollection]);
 const dom=new Promise(resolve=>{if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',resolve,{once:true});else resolve()});
 let finished=false;function finish(){if(finished)return;finished=true;overlay.classList.add('leaving');setTimeout(()=>{overlay.hidden=true},reduced?0:550)}
-(async()=>{for(let i=0;i<9;i++){const im=await first[i];if(im)cells[order[i]].append(im);await delay(reduced?0:180)}await Promise.all([ready,dom]);finish()})();
-setTimeout(()=>{status.textContent='Still loading…'},12000);
-setTimeout(()=>{dom.then(finish)},25000);
+dom.then(()=>{const gate=document.getElementById('entryGate');gate.addEventListener('submit',()=>{overlay.hidden=false;const zh=gate.querySelector('input[name="language"]:checked')?.value==='zh';status.textContent=zh?'加载中…':'Loading…';
+(async()=>{for(let i=0;i<9;i++){const im=await Promise.race([first[i],delay(1800).then(()=>null)]);if(im)cells[order[i]].append(im);await delay(reduced?0:180)}await ready;finish()})();
+setTimeout(()=>{status.textContent=zh?'仍在加载…':'Still loading…'},12000);setTimeout(finish,25000);
+},{once:true});});
 })();
 </script><noscript><style>#launchLoading{display:none}</style></noscript>
 <form id="entryGate" class="language-gate" aria-label="Entry preferences">
