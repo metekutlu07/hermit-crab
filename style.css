@@ -521,3 +521,7 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
  #overlay.story-intro[data-story=loading] .story-shell-cell .story-specimen-wipe{width:auto;height:auto;max-width:100%;max-height:100%;animation-delay:var(--landscape-delay,0s)}
  #overlay.story-intro[data-story=loading] .story-caption p{top:74%}
 }
+
+/* Square dialog frames and equal six-button home menu */
+#overlay .dialog,#overlay .dialog button{border-radius:0}
+#home .home-art.clean-home .home-buttons{grid-template-rows:repeat(6,minmax(0,1fr))}
