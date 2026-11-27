@@ -20,3 +20,5 @@
 #islandJournal .marker:nth-of-type(3),#islandJournal .marker:nth-of-type(4){left:90%!important}
 #islandJournal[data-view=map] .marker{font-size:clamp(10px,1.1vw,16px)}
 }
+
+#islandJournal .catalog-chapter{font-size:clamp(16px,3.8vw,22px);font-weight:400;border:1px solid white;padding:12px;text-align:center;width:min(100%,480px);margin:24px auto 30px}#islandJournal figure img{height:auto;aspect-ratio:1;object-fit:contain;background:#171717}#islandJournal .image-failed img{opacity:.35}
