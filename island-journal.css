@@ -40,3 +40,5 @@
 
 #islandJournal .map-chapter-title,#islandJournal .map-chapter-description{font-size:clamp(13.5px,1.63125vw,18px)}#islandJournal .map-chapter-description{line-height:1.45}
 @media(orientation:landscape) and (max-height:500px){#islandJournal .map-chapter-title,#islandJournal .map-chapter-description{font-size:13.5px}}
+
+#islandJournal .map-chapter-title,#islandJournal .map-chapter-description{font-size:clamp(15.525px,1.8759375vw,20.7px)}#islandJournal[data-view=map] footer{gap:11.7px}@media(orientation:landscape) and (max-height:500px){#islandJournal .map-chapter-title,#islandJournal .map-chapter-description{font-size:15.525px}#islandJournal[data-view=map] footer{gap:6.5px}}
