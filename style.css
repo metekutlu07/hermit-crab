@@ -541,3 +541,5 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #home .home-art.clean-home .home-title,#home .home-art.clean-home .home-buttons button,#home .home-art.clean-home .home-sound,#home .home-credit{color:#C65E58!important;text-shadow:none!important}#home .home-art.clean-home .home-buttons button,#home .home-art.clean-home .home-sound{border-color:#C65E58!important}#home .home-art.clean-home .home-buttons button:focus-visible{outline-color:#C65E58}
 
 #overlay.story-intro::after{content:"";position:absolute;inset:0;background:#000;z-index:999;opacity:0;pointer-events:none;transition:opacity .65s ease}#overlay.story-intro.story-loader-blackout::after{opacity:1;pointer-events:auto}@media(prefers-reduced-motion:reduce){#overlay.story-intro::after{transition:none}}
+
+@media(orientation:landscape){#home .home-art.clean-home #soundHome{inset:auto;top:max(10px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));left:auto;bottom:auto}}
