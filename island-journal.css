@@ -1,1 +1,22 @@
 #islandJournal[hidden]{display:none!important}#islandJournal{position:fixed;inset:0;z-index:99999;background:#f5e5cc;color:#634b38;font-family:Georgia,serif;overflow:hidden}#islandJournal button{font:inherit;color:inherit;background:#f9ebd6;border:1px solid #92765b;padding:.55em .8em;cursor:pointer}#islandJournal header{position:absolute;z-index:3;top:0;left:0;right:0;padding:18px;text-align:center;background:#f5e5ccdd}#islandJournal header button{position:absolute;left:12px}#islandJournal h1{font-size:clamp(22px,3vw,40px);font-weight:normal;margin:0}#islandJournal .viewport{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;touch-action:none}#islandJournal .stage{position:relative;width:min(100vw,177.78dvh);aspect-ratio:16/9}#islandJournal picture,#islandJournal picture img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}#islandJournal .marker{position:absolute;transform:translate(-50%,-50%);white-space:nowrap}#islandJournal footer{position:absolute;bottom:20px;left:0;right:0;text-align:center;pointer-events:none}#islandJournal .zoom{position:absolute;bottom:60px;right:16px}#islandJournal .catalog{height:100%;overflow:auto;padding:85px 18px 45px;box-sizing:border-box;touch-action:pan-y}#islandJournal figure{margin:0 auto 38px;width:min(100%,480px);text-align:center}#islandJournal figure img{width:100%;display:block;mix-blend-mode:multiply}#islandJournal figcaption{font-size:23px;padding:10px}#islandJournal[data-view=collection] .viewport,#islandJournal[data-view=collection] footer,#islandJournal[data-view=collection] .zoom,#islandJournal[data-view=map] .catalog{display:none}#islandJournal .short{display:none}@media(orientation:portrait){#islandJournal .stage{width:min(100vw,56.25dvh);aspect-ratio:9/16}#islandJournal .long{display:none}#islandJournal .short{display:inline}#islandJournal .marker:nth-of-type(1){left:18%!important;top:61%!important}#islandJournal .marker:nth-of-type(2){left:18%!important;top:36%!important}#islandJournal .marker:nth-of-type(3){left:82%!important;top:36%!important}#islandJournal .marker:nth-of-type(4){left:82%!important;top:61%!important}}
+/* Journal typography and refined map controls */
+#islandJournal{font-family:'Space Grotesk',sans-serif}
+#islandJournal button,#islandJournal h1,#islandJournal footer,#islandJournal figcaption{font-family:inherit}
+#islandJournal[data-view=collection]{background:#000;color:#fff}
+#islandJournal[data-view=collection] header{background:#000}
+#islandJournal[data-view=collection] button{background:transparent;border-color:#fff;color:#fff}
+#islandJournal figure img{mix-blend-mode:normal}
+#islandJournal .zoom{display:none!important}
+#islandJournal[data-view=map] .marker{background:transparent;border:1px solid #fff;color:#fff;text-shadow:0 1px 3px #315b65;min-width:36px;min-height:36px;padding:.35em .55em}
+#islandJournal[data-view=map] .marker[aria-pressed=true]{border-width:2px}
+#islandJournal[data-view=map] footer{left:50%;right:auto;transform:translateX(-50%);bottom:7%;width:max-content;max-width:90%;box-sizing:border-box;border:1px solid #92765b;padding:.6em 1em;background:transparent;font-size:clamp(14px,2vw,22px)}
+@media(orientation:portrait){
+#islandJournal .marker:nth-of-type(1),#islandJournal .marker:nth-of-type(2){left:7%!important}
+#islandJournal .marker:nth-of-type(3),#islandJournal .marker:nth-of-type(4){left:93%!important}
+#islandJournal[data-view=map] .marker{width:36px;height:36px;padding:0;font-size:16px}
+}
+@media(orientation:landscape){
+#islandJournal .marker:nth-of-type(1),#islandJournal .marker:nth-of-type(2){left:10%!important}
+#islandJournal .marker:nth-of-type(3),#islandJournal .marker:nth-of-type(4){left:90%!important}
+#islandJournal[data-view=map] .marker{font-size:clamp(10px,1.1vw,16px)}
+}
