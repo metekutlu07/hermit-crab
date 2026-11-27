@@ -470,7 +470,7 @@ function showGoldenIntro(onStart){
   await delay(fadeMs);
   if(!active)return;
   incoming.classList.remove('story-crossfade','story-crossfade-visible');
-  scene('bird',incoming,zh?"飞鸟靠近时，躲进你的壳中，直到危险远去。":tr("When birds approach, retreat into your shell until danger passes."));
+  scene('bird',incoming,zh?"飞鸟靠近时，躲进你的壳中，\n直到危险远去。":tr("When birds approach, retreat into your shell until danger passes."));
   const startButton=button(zh?"开始":tr("Start"),start);startButton.disabled=true;
   dialog.getBoundingClientRect();dialog.classList.remove('story-ui-hidden');
   await delay(fadeMs);startButton.disabled=false;
