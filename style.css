@@ -539,3 +539,5 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 @media(orientation:portrait){#home .home-art.clean-home .home-buttons{--home-gap:clamp(9px,1.575cqh,20.25px);height:calc(34.5% - var(--home-gap)*.75)}}
 @media(orientation:landscape) and (max-height:500px){#home .home-art.clean-home .home-buttons{height:calc(47.15% - var(--home-gap)*.75)}}
 #home .home-art.clean-home .home-title,#home .home-art.clean-home .home-buttons button,#home .home-art.clean-home .home-sound,#home .home-credit{color:#C65E58!important;text-shadow:none!important}#home .home-art.clean-home .home-buttons button,#home .home-art.clean-home .home-sound{border-color:#C65E58!important}#home .home-art.clean-home .home-buttons button:focus-visible{outline-color:#C65E58}
+
+#overlay.story-intro::after{content:"";position:absolute;inset:0;background:#000;z-index:999;opacity:0;pointer-events:none;transition:opacity .65s ease}#overlay.story-intro.story-loader-blackout::after{opacity:1;pointer-events:auto}@media(prefers-reduced-motion:reduce){#overlay.story-intro::after{transition:none}}
