@@ -22,11 +22,11 @@
 (()=>{const overlay=document.getElementById('launchLoading'),grid=document.getElementById('launchGrid'),status=document.getElementById('launchStatus');
 const cells=Array.from({length:5},()=>{const el=document.createElement('div');grid.append(el);return el});
 const order=[4,3,2,1,0],cache=new Map(),delay=ms=>new Promise(r=>setTimeout(r,ms)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-function load(name){if(cache.has(name))return cache.get(name);const p=new Promise(resolve=>{const im=new Image();im.alt='';im.decoding='async';im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src='assets/'+name});cache.set(name,p);return p}
+function load(name){if(cache.has(name))return cache.get(name);const p=new Promise(resolve=>{const im=new Image();im.alt='';im.decoding='async';im.onload=()=>{if(im.decode)im.decode().catch(()=>{}).then(()=>resolve(im));else resolve(im)};im.onerror=()=>resolve(null);im.fetchPriority=name.startsWith('collection-shell-')?'high':'auto';im.src='assets/'+name});cache.set(name,p);return p}
 const shells=Array.from({length:20},(_,i)=>'collection-shell-'+String(i+1).padStart(2,'0')+'.jpg');
 const specimens=['scallop','cowrie','cockle','limpet','moon-snail'].map(n=>'specimen-'+n+'-painted.png');
 const first=specimens.map(load); 
-const allCollection=shells.map(load);
+const allCollection=shells.slice(0,5).map(load); window.journalPriorityImages=allCollection;
 const portrait=matchMedia('(orientation:portrait)').matches;
 const essentials=[portrait?'home-portrait-empty.jpeg':'home-landscape-empty.jpeg',portrait?'island-mobile.jpg':'island-desktop.jpg','golden-1.jpg','crab-golden-idle.png','crab-golden-walk.png'];
 const ready=Promise.all([...essentials.map(load),...allCollection]);
@@ -91,6 +91,6 @@ setTimeout(()=>{status.textContent=zh?'仍在加载…':'Still loading…'},1200
 <script src="golden-soundscape.js?v=2"></script>
 <script src="golden-atmosphere.js?v=21"></script>
 <script src="game.js?v=intro67"></script>
-<script src="island-journal.js?v=4"></script>
+<script src="island-journal.js?v=5"></script>
 </body>
 </html>
