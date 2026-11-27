@@ -377,11 +377,10 @@ function showGoldenCompletion(preview=false){
   const art=el('div','completion-art',undefined,row);
   if(found[i]){
    const image=document.createElement('img');
-   image.alt='';image.draggable=false;image.src=imageReady(painterlySpecimenArt[i])?painterlySpecimenArt[i].src:assetURL(specimenFiles[i].replace('.png','-painted.png'));
-   image.onerror=()=>{image.onerror=null;image.src=assetURL(specimenFiles[i])};art.append(image);
+   image.alt=name;image.draggable=false;image.decoding='async';image.src=assetURL('collection-shell-'+String(i+1).padStart(2,'0')+'.jpg');art.append(image);window.getJournalShellImage?.(i).then(im=>{if(image.isConnected&&im.naturalWidth){const copy=im.cloneNode();copy.alt=name;image.replaceWith(copy)}}).catch(()=>{});
   }else el('span','completion-missing','?',art);
   const label=el('div','completion-label',undefined,row);
-  el('span','completion-name',found[i]?(zh?tr(name):name):(zh?'尚未发现':'Undiscovered shell'),label);
+  const info=window.journalShellInfo?.(i);const line=el('div','completion-specimen-line',undefined,label);el('span','completion-name',found[i]?(info?.name||(zh?tr(name):name)):(zh?'尚未发现':'Undiscovered shell'),line);if(found[i]&&info){el('span','completion-number',info.number,line);el('p','completion-description',info.description,label);}
   if(!found[i])el('small','completion-status',zh?'未收集':'Not collected',label);
  });
  // Put the chapter identifier before the heading; preserve the standard dialog semantics.
