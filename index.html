@@ -8,8 +8,33 @@
 <link rel="stylesheet" href="style.css?v=intro66">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="island-journal.css?v=3">
-</head>
+<style>
+#launchLoading{position:fixed;inset:0;z-index:2147483647;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;font-family:'Space Grotesk',sans-serif;transition:opacity .55s ease}
+#launchLoading[hidden]{display:none}#launchLoading.leaving{opacity:0;pointer-events:none}
+#launchGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;width:min(76vw,52dvh,420px)}
+#launchGrid>div{aspect-ratio:1;min-width:0}#launchGrid img{display:block;width:100%;height:100%;object-fit:contain;animation:launchReveal .4s ease both}
+@keyframes launchReveal{from{opacity:0}to{opacity:1}}#launchStatus{font-size:15px;letter-spacing:.08em;margin:0}
+@media(prefers-reduced-motion:reduce){#launchGrid img{animation:none}#launchLoading{transition:none}}
+</style></head>
 <body>
+<div id="launchLoading" role="status" aria-live="polite"><div id="launchGrid" aria-hidden="true"></div><p id="launchStatus">Loading…</p></div>
+<script>
+(()=>{const overlay=document.getElementById('launchLoading'),grid=document.getElementById('launchGrid'),status=document.getElementById('launchStatus');
+const cells=Array.from({length:9},()=>{const el=document.createElement('div');grid.append(el);return el});
+const order=[0,1,2,5,8,7,6,3,4],cache=new Map(),delay=ms=>new Promise(r=>setTimeout(r,ms)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function load(name){if(cache.has(name))return cache.get(name);const p=new Promise(resolve=>{const im=new Image();im.alt='';im.decoding='async';im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src='assets/'+name});cache.set(name,p);return p}
+const shells=Array.from({length:20},(_,i)=>'collection-shell-'+String(i+1).padStart(2,'0')+'.jpg');
+const first=shells.slice(0,9).map(load);
+const portrait=matchMedia('(orientation:portrait)').matches;
+const essentials=[portrait?'home-portrait-empty.jpeg':'home-landscape-empty.jpeg',portrait?'island-mobile.jpg':'island-desktop.jpg','golden-1.jpg','crab-golden-idle.png','crab-golden-walk.png'];
+const ready=Promise.all([...essentials.map(load),...shells.slice(9).map(load)]);
+const dom=new Promise(resolve=>{if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',resolve,{once:true});else resolve()});
+let finished=false;function finish(){if(finished)return;finished=true;overlay.classList.add('leaving');setTimeout(()=>{overlay.hidden=true},reduced?0:550)}
+(async()=>{for(let i=0;i<9;i++){const im=await first[i];if(im)cells[order[i]].append(im);await delay(reduced?0:180)}await Promise.all([ready,dom]);finish()})();
+setTimeout(()=>{status.textContent='Still loading…'},12000);
+setTimeout(()=>{dom.then(finish)},25000);
+})();
+</script><noscript><style>#launchLoading{display:none}</style></noscript>
 <form id="entryGate" class="language-gate" aria-label="Entry preferences">
   <fieldset><legend id="gateLanguageLabel">Language</legend><div class="language-options"><label><input type="radio" name="language" value="zh"><span>中文</span></label><label><input type="radio" name="language" value="en" checked><span>English</span></label></div></fieldset>
   <div class="gate-settings"><fieldset><legend id="gateSoundLabel">Sound</legend><button type="button" id="gateSound" class="gate-option" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="gateSoundPath" d="M3 9h4l5-4v14l-5-4H3zM16 9l6 6m0-6-6 6"/></svg><span id="gateSoundText">Off</span></button></fieldset>
