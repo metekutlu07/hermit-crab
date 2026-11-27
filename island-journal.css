@@ -54,3 +54,5 @@
 #islandJournal[data-view=collection] .catalog-chapter{flex:0 0 190px;width:190px;margin:0;scroll-snap-align:start;font-size:18px}
 #islandJournal[data-view=collection] header{min-height:60px}
 }
+
+@media(orientation:landscape) and (min-width:900px){#islandJournal[data-view=collection] .catalog{display:flex;flex-direction:row;align-items:center;gap:48px;overflow-x:auto;overflow-y:hidden;padding:76px 5vw 24px;touch-action:pan-x;scrollbar-width:thin;scrollbar-color:#777 #000}#islandJournal[data-view=collection] .catalog-chapter{flex:0 0 190px;width:190px;margin:0;font-size:18px;align-self:center}#islandJournal[data-view=collection] figure{flex:0 0 auto;width:min(68dvh,65vw);margin:0;align-self:center}#islandJournal[data-view=collection] figure img{width:100%;height:auto;aspect-ratio:1;object-fit:contain}#islandJournal[data-view=collection] figcaption{font-size:17px;padding-top:10px}#islandJournal[data-view=collection] figcaption p{font-size:14px;line-height:1.45;margin-top:7px}#islandJournal[data-view=collection] .specimen-line span:last-child{font-size:14px}#islandJournal[data-view=collection] header{z-index:5}}
