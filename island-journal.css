@@ -33,3 +33,7 @@
 #islandJournal[data-view=map] footer{bottom:calc(4.5% + env(safe-area-inset-bottom,0px));width:min(90%,720px);max-width:90%}
 #islandJournal .map-chapter-description{font-size:clamp(18px,2.175vw,24px);line-height:1.35}
 @media(orientation:landscape) and (max-height:500px){#islandJournal[data-view=map] footer{bottom:3%;width:min(80%,720px)}#islandJournal .map-chapter-description{font-size:18px;line-height:1.25}}
+
+#islandJournal .island-name{position:absolute;z-index:2;top:12%;left:50%;transform:translateX(-50%);white-space:nowrap;color:#634b38;font-size:clamp(20px,3vw,36px);font-weight:400;letter-spacing:.07em;pointer-events:none;text-align:center}
+@media(orientation:portrait){#islandJournal .island-name{top:14%;font-size:clamp(20px,6vw,32px)}}
+@media(orientation:landscape) and (max-height:500px){#islandJournal .island-name{top:19%;font-size:20px}}
