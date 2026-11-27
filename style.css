@@ -543,3 +543,5 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #overlay.story-intro::after{content:"";position:absolute;inset:0;background:#000;z-index:999;opacity:0;pointer-events:none;transition:opacity .65s ease}#overlay.story-intro.story-loader-blackout::after{opacity:1;pointer-events:auto}@media(prefers-reduced-motion:reduce){#overlay.story-intro::after{transition:none}}
 
 @media(orientation:landscape){#home .home-art.clean-home #soundHome{inset:auto;top:max(10px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));left:auto;bottom:auto}}
+
+@media(orientation:portrait){html[lang=fr] #home .home-art.clean-home .home-title{line-height:1.5!important}html[lang=fr] #home .home-art.clean-home .home-title span{display:block!important;margin:0!important}html[lang=fr] #overlay.story-intro[data-story=wake] #dialogButtons{top:82%}html[lang=fr] #overlay.story-intro:not([data-story=loading]):not([data-story=bird]) #dialogButtons{top:82%}html[lang^=zh] #overlay.story-intro[data-story=bird] .story-caption{white-space:pre-line;width:90%;max-width:90%;left:5%;right:5%;transform:none}}
