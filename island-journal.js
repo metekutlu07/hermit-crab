@@ -8,6 +8,7 @@ const shellURL=i=>'assets/collection-shell-'+String(i+1).padStart(2,'0')+'.jpg';
 const cache=new Map();
 (window.journalPriorityImages||[]).forEach((p,i)=>{cache.set(i,p.then(im=>{if(!im){cache.delete(i);return preload(i)}return im}))});
 function preload(i){if(cache.has(i))return cache.get(i);const im=new Image();im.decoding='async';const p=new Promise((resolve,reject)=>{im.onload=()=>{if(im.decode)im.decode().catch(()=>{}).then(()=>resolve(im));else resolve(im)};im.onerror=()=>reject(Error(shellURL(i)));im.src=shellURL(i)});cache.set(i,p);p.catch(()=>cache.delete(i));return p}
+window.journalShellInfo=i=>({name:t(...names[i]),description:t(...descriptions[i]),number:t('Shell '+String(i+1).padStart(2,'0'),'贝壳 '+String(i+1).padStart(2,'0')),url:shellURL(i)});window.getJournalShellImage=preload;
 let warm;function warmAll(){return warm||(warm=(async()=>{await Promise.allSettled(names.slice(0,5).map((_,i)=>preload(i)));for(let i=5;i<names.length;i+=2)await Promise.allSettled([preload(i),...(i+1<names.length?[preload(i+1)]:[])]);})().finally(()=>{warm=null}))}
 window.preloadJournalShells=warmAll;
 window.addEventListener('load',()=>warmAll(),{once:true});
