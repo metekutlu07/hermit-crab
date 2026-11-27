@@ -7,11 +7,11 @@
 <title>A Traveler in a Shell · Playable Game</title>
 <link rel="stylesheet" href="style.css?v=intro66">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="island-journal.css?v=3">
+<link rel="stylesheet" href="island-journal.css?v=4">
 <style>
 #launchLoading{position:fixed;inset:0;z-index:2147483647;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;font-family:'Space Grotesk',sans-serif;transition:opacity .55s ease}
 #launchLoading[hidden]{display:none}#launchLoading.leaving{opacity:0;pointer-events:none}
-#launchGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;width:min(76vw,52dvh,420px)}
+#launchGrid{display:grid;grid-template-columns:1fr;gap:6px;width:min(22vw,11dvh,92px)}
 #launchGrid>div{aspect-ratio:1;min-width:0}#launchGrid img{display:block;width:100%;height:100%;object-fit:contain;animation:launchReveal .4s ease both}
 @keyframes launchReveal{from{opacity:0}to{opacity:1}}#launchStatus{font-size:15px;letter-spacing:.08em;margin:0}
 @media(prefers-reduced-motion:reduce){#launchGrid img{animation:none}#launchLoading{transition:none}}
@@ -20,12 +20,12 @@
 <div id="launchLoading" hidden role="status" aria-live="polite"><div id="launchGrid" aria-hidden="true"></div><p id="launchStatus">Loading…</p></div>
 <script>
 (()=>{const overlay=document.getElementById('launchLoading'),grid=document.getElementById('launchGrid'),status=document.getElementById('launchStatus');
-const cells=Array.from({length:9},()=>{const el=document.createElement('div');grid.append(el);return el});
-const order=[0,1,2,5,8,7,6,3,4],cache=new Map(),delay=ms=>new Promise(r=>setTimeout(r,ms)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const cells=Array.from({length:5},()=>{const el=document.createElement('div');grid.append(el);return el});
+const order=[0,1,2,3,4],cache=new Map(),delay=ms=>new Promise(r=>setTimeout(r,ms)),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function load(name){if(cache.has(name))return cache.get(name);const p=new Promise(resolve=>{const im=new Image();im.alt='';im.decoding='async';im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src='assets/'+name});cache.set(name,p);return p}
 const shells=Array.from({length:20},(_,i)=>'collection-shell-'+String(i+1).padStart(2,'0')+'.jpg');
 const specimens=['scallop','cowrie','cockle','limpet','moon-snail'].map(n=>'specimen-'+n+'-painted.png');
-const first=Array.from({length:9},(_,i)=>load(i<5?specimens[i]:'loading-shell-'+String(i+1).padStart(2,'0')+'.png')); 
+const first=specimens.map(load); 
 const allCollection=shells.map(load);
 const portrait=matchMedia('(orientation:portrait)').matches;
 const essentials=[portrait?'home-portrait-empty.jpeg':'home-landscape-empty.jpeg',portrait?'island-mobile.jpg':'island-desktop.jpg','golden-1.jpg','crab-golden-idle.png','crab-golden-walk.png'];
@@ -33,7 +33,7 @@ const ready=Promise.all([...essentials.map(load),...allCollection]);
 const dom=new Promise(resolve=>{if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',resolve,{once:true});else resolve()});
 let finished=false;function finish(){if(finished)return;finished=true;overlay.classList.add('leaving');setTimeout(()=>{overlay.hidden=true},reduced?0:550)}
 dom.then(()=>{const gate=document.getElementById('entryGate');gate.addEventListener('submit',()=>{overlay.hidden=false;const zh=gate.querySelector('input[name="language"]:checked')?.value==='zh';status.textContent=zh?'加载中…':'Loading…';
-(async()=>{for(let i=0;i<9;i++){const im=await Promise.race([first[i],delay(1800).then(()=>null)]);if(im)cells[order[i]].append(im);await delay(reduced?0:180)}await ready;finish()})();
+(async()=>{for(let i=0;i<5;i++){const im=await Promise.race([first[i],delay(1800).then(()=>null)]);if(im)cells[order[i]].append(im);await delay(reduced?0:180)}await ready;finish()})();
 setTimeout(()=>{status.textContent=zh?'仍在加载…':'Still loading…'},12000);setTimeout(finish,25000);
 },{once:true});});
 })();
@@ -91,6 +91,6 @@ setTimeout(()=>{status.textContent=zh?'仍在加载…':'Still loading…'},1200
 <script src="golden-soundscape.js?v=2"></script>
 <script src="golden-atmosphere.js?v=21"></script>
 <script src="game.js?v=intro67"></script>
-<script src="island-journal.js?v=3"></script>
+<script src="island-journal.js?v=4"></script>
 </body>
 </html>
