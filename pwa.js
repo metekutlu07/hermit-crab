@@ -11,10 +11,8 @@ if (gate) {
   button.hidden = true;
   button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M12 7v8m-4-4h8"/></svg><span></span>';
   const enter = gate.querySelector('.gate-enter');
-  const entryActions = document.createElement('div');
-  entryActions.className = 'entry-actions';
-  enter.before(entryActions);
-  entryActions.append(enter, button);
+  const entryActions = enter.parentElement;
+  entryActions.append(button);
   const dialog = document.createElement('dialog');
   dialog.className = 'install-guide';
   dialog.setAttribute('aria-labelledby', 'install-guide-title');
