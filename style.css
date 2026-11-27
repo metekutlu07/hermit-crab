@@ -338,12 +338,12 @@ html,body,#app,button{user-select:none;-webkit-user-select:none;-webkit-touch-ca
 #home .home-art.clean-home .home-buttons button{border-color:#C65E58!important;background:transparent;box-shadow:none!important}
 #home .home-art.clean-home .home-buttons button:focus-visible{outline-color:#C65E58}
 #home .home-credit{color:#C65E58}
-#home .home-art.clean-home .home-buttons{gap:clamp(4.5px,.9cqh,13.5px)}
+#home .home-art.clean-home .home-buttons{gap:clamp(6.75px,1.35cqh,20.25px)}
 #home .home-art.clean-home #soundHome{position:absolute;z-index:3;inset:auto;left:max(12px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));width:auto;height:auto;min-height:32px;padding:6px 10px;display:grid;place-items:center;border:1px solid #C65E58;border-radius:0;background:transparent;color:#C65E58;font:500 clamp(11px,1.05cqw,14px)/1.2 var(--graphic-font);text-shadow:none;box-shadow:none;touch-action:manipulation}
 #game #soundGame{pointer-events:auto;touch-action:manipulation}
 #game #soundGame:active{background:rgba(255,255,255,.25)}
 @media(orientation:portrait){
- #home .home-art.clean-home .home-buttons{gap:clamp(6px,1.05cqh,13.5px)}
+ #home .home-art.clean-home .home-buttons{gap:clamp(9px,1.575cqh,20.25px)}
  #home .home-art.clean-home #soundHome{font-size:clamp(11px,2.7cqw,13px)}
 }
 
