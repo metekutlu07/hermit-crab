@@ -18,16 +18,16 @@ if (gate) {
   dialog.setAttribute('aria-labelledby', 'install-guide-title');
   dialog.innerHTML = '<img src="assets/app-icon-192.png" alt="" width="56" height="56"><h2 id="install-guide-title"></h2><ol></ol><button type="button" class="install-close"></button>';
   document.body.append(dialog);
-  const en = () => gate.querySelector('input[name="language"]:checked')?.value === 'en';
+  const lang=()=>gate.querySelector('input[name="language"]:checked')?.value||'en';const en=()=>lang()!=='zh';
   function localize() {
-    button.querySelector('span').textContent = en() ? 'Get the app' : '安装应用';
+    button.querySelector('span').textContent = en() ? window.travelerTranslate('Get the app',lang()) : '安装应用';
     dialog.lang = en() ? 'en' : 'zh-CN';
     dialog.querySelector('h2').textContent = en() ? 'Add A Traveler in a Shell to your home screen' : '将《贝壳里的旅人》添加到主屏幕';
     dialog.querySelector('.install-close').textContent = en() ? 'Close' : '关闭';
     const steps = ios ? (en() ? ['Open this page in Safari.', 'Tap the Share icon (square with an upward arrow).', 'Choose Add to Home Screen, then Add.'] : ['在 Safari 浏览器中打开此网页。','点击分享图标（带向上箭头的方框）。','选择“添加到主屏幕”，然后点击“添加”。']) : (en() ? ['Open your browser menu.', 'Choose Install app or Add to Home screen.', 'Confirm to add the game.'] : ['打开浏览器菜单。','选择“安装应用”或“添加到主屏幕”。','确认添加游戏。']);
     const list = dialog.querySelector('ol');
     list.replaceChildren(...steps.map(step => { const li = document.createElement('li'); li.textContent = step; return li; }));
-    if (ios) list.children[1].insertAdjacentHTML('beforeend',' <svg class="install-share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V2m-4 4 4-4 4 4M8 9H5v13h14V9h-3"/></svg>');
+    if(lang()==='fr'||lang()==='tr'){const f=lang()==='fr';dialog.querySelector('h2').textContent=f?'Ajouter le jeu à votre écran d’accueil':'Oyunu ana ekranına ekle';dialog.querySelector('.install-close').textContent=f?'Fermer':'Kapat';const localized=ios?(f?['Ouvrez cette page dans Safari.','Touchez le bouton Partager.','Choisissez Sur l’écran d’accueil, puis Ajouter.']:['Bu sayfayı Safari’de aç.','Paylaş simgesine dokun.','Ana Ekrana Ekle seçeneğini seç.']):(f?['Ouvrez le menu du navigateur.','Choisissez Installer ou Ajouter à l’écran d’accueil.','Confirmez.']:['Tarayıcı menüsünü aç.','Yükle veya Ana Ekrana Ekle seçeneğini seç.','Onayla.']);list.replaceChildren(...localized.map(step=>{const li=document.createElement('li');li.textContent=step;return li}));} if (ios) list.children[1].insertAdjacentHTML('beforeend',' <svg class="install-share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V2m-4 4 4-4 4 4M8 9H5v13h14V9h-3"/></svg>');
   }
   function refresh() {
     button.hidden = installed || standalone.matches || fullscreen.matches || navigator.standalone === true;
